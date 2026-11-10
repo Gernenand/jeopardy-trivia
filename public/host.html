@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jeopardy! Host Dashboard (/host)</title>
+  <style>
+    :root {
+      --bg-dark: #070b19;
+      --bg-panel: #101736;
+      --board-blue: #060ce9;
+      --board-blue-hover: #1a22ff;
+      --gold: #ffcc00;
+      --gold-soft: #ffe066;
+      --text-light: #f8fafc;
+      --text-muted: #94a3b8;
+      --green: #10b981;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --purple: #7c3aed;
+      --border: rgba(255, 255, 255, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: radial-gradient(circle at top, #152259 0%, var(--bg-dark) 70%);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(10, 15, 36, 0.94);
+      border-bottom: 2px solid var(--gold);
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .brand h1 {
+      font-size: 1.4rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    .room-badge {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 2px solid var(--gold);
+      border-radius: 10px;
+      padding: 0.35rem 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .room-badge span.label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    .room-badge strong {
+      font-size: 1.25rem;
+      color: var(--gold);
+      font-family: monospace;
+      letter-spacing: 0.1em;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      padding: 0.55rem 0.95rem;
+      font-size: 0.86rem;
+      transition: transform 0.12s ease, background 0.15s ease, opacity 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: var(--text-light);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #334155;
+    }
+
+    .btn-gold {
+      background: var(--gold);
+      color: #090d16;
+    }
+
+    .btn-gold:hover:not(:disabled) {
+      background: var(--gold-soft);
+    }
+
+    .btn-green {
+      background: var(--green);
+      color: #ffffff;
+    }
+
+    .btn-red {
+      background: var(--red);
+      color: #ffffff;
+    }
+
+    .btn-purple {
+      background: var(--purple);
+      color: #ffffff;
+      border: 1px solid #a78bfa;
+    }
+
+    .btn-blue {
+      background: #2563eb;
+      color: #ffffff;
+      border: 1px solid #60a5fa;
+    }
+
+    .btn-kick {
+      background: rgba(239, 68, 68, 0.18);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      padding: 0.25rem 0.55rem;
+      font-size: 0.74rem;
+      border-radius: 6px;
+    }
+
+    .btn-kick:hover {
+      background: var(--red);
+      color: #ffffff;
+    }
+
+    .status-bar {
+      background: rgba(16, 23, 54, 0.92);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+      color: #cbd5e1;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 370px;
+      gap: 1.25rem;
+      padding: 1.25rem 1.5rem;
+      max-width: 1680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1120px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Setup Lobby & Editor */
+    .setup-lobby {
+      background: var(--bg-panel);
+      border: 2px solid rgba(255, 204, 0, 0.35);
+      border-radius: 16px;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .setup-top-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 1rem;
+      background: rgba(9, 13, 28, 0.78);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .field-group label {
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--gold);
+      letter-spacing: 0.06em;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      background: #090d1c;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      font-family: inherit;
+      font-size: 0.88rem;
+      width: 100%;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .round-setup-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .round-setup-tab {
+      padding: 0.5rem 1.1rem;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      background: #0b1124;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .round-setup-tab.active {
+      background: var(--board-blue);
+      color: var(--gold);
+      border-color: var(--gold);
+    }
+
+    .category-editor-card {
+      background: rgba(9, 13, 28, 0.82);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .clue-row-grid {
+      display: grid;
+      grid-template-columns: 95px 1fr 1fr;
+      gap: 0.6rem;
+      margin-top: 0.55rem;
+      align-items: center;
+    }
+
+    @media (max-width: 680px) {
+      .clue-row-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .json-editor-box {
+      display: none;
+      flex-direction: column;
+      gap: 0.85rem;
+      background: rgba(9, 13, 28, 0.94);
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      padding: 1.15rem;
+    }
+
+    /* Live Jeopardy Board */
+    .live-round-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(16, 23, 54, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+    }
+
+    .board-grid {
+      display: grid;
+      gap: 0.65rem;
+      background: #000000;
+      padding: 0.75rem;
+      border-radius: 14px;
+      border: 3px solid #263366;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
+      overflow-x: auto;
+    }
+
+    .category-cell {
+      background: linear-gradient(180deg, #091294 0%, #04085c 100%);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.92rem;
+      text-align: center;
+      padding: 1rem 0.5rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 76px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .clue-tile {
+      background: linear-gradient(180deg, var(--board-blue) 0%, #04099e 100%);
+      color: var(--gold);
+      font-weight: 900;
+      font-size: 1.8rem;
+      text-align: center;
+      padding: 1.3rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 204, 0, 0.25);
+      text-shadow: 2px 3px 0px #000000;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 88px;
+    }
+
+    .clue-tile:hover:not(.used) {
+      background: var(--board-blue-hover);
+      border-color: var(--gold);
+    }
+
+    .clue-tile.used {
+      background: #070b24;
+      color: rgba(255, 255, 255, 0.1);
+      text-shadow: none;
+      border-color: rgba(255, 255, 255, 0.04);
+      cursor: default;
+    }
+
+    /* Scalable Scoreboard Sidebar (Supports 10+ / Uncapped Teams cleanly) */
+    .scoreboard-panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      max-height: calc(100vh - 140px);
+      position: sticky;
+      top: 90px;
+    }
+
+    @media (max-width: 1120px) {
+      .scoreboard-panel {
+        max-height: none;
+        position: static;
+      }
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.65rem;
+    }
+
+    .panel-header h2 {
+      font-size: 1rem;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .player-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.55rem;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+      flex: 1;
+    }
+
+    .player-card {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .player-card.buzzed {
+      border: 2px solid var(--gold);
+      background: rgba(255, 204, 0, 0.16);
+    }
+
+    .player-score {
+      font-size: 1.1rem;
+      font-weight: 800;
+      font-family: monospace;
+      color: var(--gold);
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 6, 20, 0.88);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 50;
+      backdrop-filter: blur(6px);
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .clue-modal {
+      background: linear-gradient(180deg, #060ce9 0%, #03067a 100%);
+      border: 4px solid var(--gold);
+      border-radius: 18px;
+      max-width: 960px;
+      width: 100%;
+      padding: 2rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+
+    .clue-question {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.35;
+      color: #ffffff;
+      padding: 0.85rem 0;
+    }
+
+    .host-answer-box {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px dashed rgba(255, 204, 0, 0.5);
+      border-radius: 10px;
+      padding: 0.8rem 1.2rem;
+      color: var(--gold-soft);
+      font-size: 1.05rem;
+    }
+
+    .buzzer-banner {
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 12px;
+      padding: 0.9rem;
+      font-size: 1.15rem;
+      font-weight: 800;
+      border: 2px solid transparent;
+    }
+
+    .timer-pill {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 2.3rem;
+      font-weight: 900;
+      color: var(--gold);
+      background: rgba(0, 0, 0, 0.55);
+      padding: 0.35rem 1.3rem;
+      border-radius: 999px;
+      border: 2px solid var(--gold);
+    }
+
+    /* Scalable Final Jeopardy & Podium Grids */
+    .fj-submissions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.65rem;
+      max-height: 340px;
+      overflow-y: auto;
+      text-align: left;
+      padding-right: 0.25rem;
+    }
+
+    .podium-scroll-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 0.6rem;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>🎯 JEOPARDY! HOST</h1>
+      <div class="room-badge">
+        <span class="label">Room Code</span>
+        <strong id="roomCodeDisplay">----</strong>
+      </div>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">
+        TV Projector: <strong>/screen</strong> • Players: <strong>/play</strong>
+      </span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-secondary" id="openTvScreenBtn" type="button">📽️ Launch TV Screen (/screen)</button>
+      <button class="btn-secondary" id="toggleSetupViewBtn" type="button">🛠️ Setup &amp; Board Editor</button>
+      <button class="btn-secondary" id="headerRawJsonBtn" type="button">{ } Unified JSON Editor</button>
+      <button class="btn-gold" id="saveGameBtn" type="button">💾 Save Game</button>
+      <button class="btn-blue" id="headerAdvanceDoubleBtn" type="button">⏭️ Double Jeopardy</button>
+      <button class="btn-purple" id="launchFinalJeopardyBtn" type="button">🌟 Final Jeopardy</button>
+      <button class="btn-secondary" id="resetGameBtn" type="button">🔄 Reset Scores</button>
+      <button class="btn-gold" id="endGameBtn" type="button">🏆 End Game</button>
+    </div>
+  </header>
+
+  <div class="status-bar">
+    <div id="statusMessage">Connecting to live game server...</div>
+    <div id="completionStatusBadge" style="font-weight: 800; color: var(--gold);">Single: 0/25 • Double: 0/25 Clues Filled</div>
+  </div>
+
+  <main>
+    <section id="primaryStage">
+      <!-- 1. HOST SETUP & MULTI-ROUND / UNIFIED JSON QUESTION ENTRY VIEW -->
+      <div class="setup-lobby" id="setupLobbySection">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.85rem;">
+          <div>
+            <h2 style="color: var(--gold); font-size: 1.2rem;">1. Multi-Round Game Setup (Single, Double &amp; Final Jeopardy)</h2>
+            <p style="font-size: 0.84rem; color: var(--text-muted);">
+              Configure Single Jeopardy ($200–$1000), Double Jeopardy ($400–$2000), and Final Jeopardy manually or via the unified JSON editor/importer.
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <input type="file" id="importJsonFileInput" accept=".json,application/json" style="display: none;" />
+            <button class="btn-secondary" id="importJsonFileBtn" type="button">📂 Import JSON</button>
+            <button class="btn-secondary" id="toggleJsonEditorBtn" type="button">{ } Unified Raw JSON Editor</button>
+            <button class="btn-secondary" id="exportJsonBtn" type="button">⬇️ Export JSON</button>
+            <button class="btn-gold" id="saveGameTopBtn" type="button">💾 Save Game</button>
+            <button class="btn-green" id="startGameBtn" type="button" disabled>🚀 Start Game (Fill Both Rounds First)</button>
+          </div>
+        </div>
+
+        <!-- Custom Room Code & Final Jeopardy Setup Row -->
+        <div class="setup-top-row">
+          <div class="field-group">
+            <label for="customRoomCodeInput">Custom Room Code (Leave blank for random)</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input id="customRoomCodeInput" type="text" maxlength="12" placeholder="e.g. TRIVIA1" style="text-transform: uppercase; font-family: monospace; font-weight: 800;" />
+              <button class="btn-gold" id="applyRoomCodeBtn" type="button" style="white-space: nowrap;">Set Code</button>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Supports 10+ teams joining simultaneously at <code>/play</code>.</span>
+          </div>
+
+          <div class="field-group">
+            <label for="fjCategoryInput">Final Jeopardy Category &amp; Timer</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input id="fjCategoryInput" type="text" placeholder="e.g. WORLD CAPITALS" />
+              <select id="fjTimerSelect" style="max-width: 135px;">
+                <option value="30">⏱️ 30 sec</option>
+                <option value="45">⏱️ 45 sec</option>
+                <option value="60">⏱️ 60 sec</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="fjQuestionInput">Final Jeopardy Clue &amp; Answer</label>
+            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+              <input id="fjQuestionInput" type="text" placeholder="Final Jeopardy Clue prompt..." />
+              <input id="fjAnswerInput" type="text" placeholder="Correct Final Jeopardy Response..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- Expandable Unified Raw JSON Editor Panel ({ jeopardy, doubleJeopardy, finalJeopardy }) -->
+        <div class="json-editor-box" id="rawJsonEditorPanel">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <strong style="color: var(--gold); font-size: 0.95rem;">{ } Unified Multi-Round JSON Editor (jeopardy, doubleJeopardy, finalJeopardy)</strong>
+              <p style="font-size: 0.8rem; color: var(--text-muted);">
+                Review, edit, or paste the complete multi-round JSON below. Validated on save to prevent syntax or structure crashes.
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-gold" id="applyRawJsonBtn" type="button">✅ Validate &amp; Save JSON</button>
+              <button class="btn-secondary" id="closeRawJsonBtn" type="button">Back to Visual Editor</button>
+            </div>
+          </div>
+          <div id="rawJsonErrorMsg" style="color: #f87171; font-size: 0.85rem; font-weight: 700; display: none;"></div>
+          <textarea id="rawJsonTextarea" rows="20" style="font-family: monospace; font-size: 0.83rem; line-height: 1.4;"></textarea>
+        </div>
+
+        <!-- Visual Category & Clue Slots Editor with Single / Double Jeopardy Round Switcher -->
+        <div id="visualCategoriesWrapper">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.85rem;">
+            <div class="round-setup-tabs" style="align-items: center;">
+              <button type="button" class="round-setup-tab active" id="setupTabSingleBtn">
+                1️⃣ Single Jeopardy ($200 – $1000)
+              </button>
+              <label style="display: inline-flex; align-items: center; gap: 0.45rem; background: #0b1124; border: 1px solid var(--border); padding: 0.48rem 0.85rem; border-radius: 8px; font-size: 0.82rem; font-weight: 800; color: var(--gold); cursor: pointer;">
+                <input type="checkbox" id="enableDoubleJeopardyCheckbox" style="width: 16px; height: 16px; accent-color: var(--gold);" />
+                Include Double Jeopardy (Optional)
+              </label>
+              <button type="button" class="round-setup-tab" id="setupTabDoubleBtn" style="display: none;">
+                2️⃣ Double Jeopardy ($400 – $2000)
+              </button>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-secondary" id="addCategorySlotBtn" type="button">+ Add Category to Active Round</button>
+            </div>
+          </div>
+
+          <div id="manualEditorCategoriesList"></div>
+        </div>
+      </div>
+
+      <!-- 2. LIVE JEOPARDY BOARD VIEW -->
+      <div id="liveBoardSection" style="display: none; flex-direction: column; gap: 1rem;">
+        <!-- Live Round Switcher & Advance Bar -->
+        <div class="live-round-toolbar">
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <button type="button" class="round-setup-tab active" id="liveRoundSingleBtn">
+              1️⃣ Single Jeopardy
+            </button>
+            <button type="button" class="round-setup-tab" id="liveRoundDoubleBtn">
+              2️⃣ Double Jeopardy
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <button class="btn-gold" id="advanceToDoubleJeopardyBtn" type="button">
+              ⏭️ Advance to Double Jeopardy (Keep Scores)
+            </button>
+            <button class="btn-purple" id="advanceToFinalJeopardyBtn" type="button">
+              🌟 Advance to Final Jeopardy
+            </button>
+          </div>
+        </div>
+
+        <div id="singleExhaustedBanner" style="display: none; background: rgba(37, 99, 235, 0.25); border: 2px solid var(--gold); border-radius: 12px; padding: 1rem; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <strong style="color: var(--gold);">🎯 Single Jeopardy Board Complete!</strong>
+            <p style="font-size: 0.86rem; color: #e2e8f0;">Advance to Double Jeopardy to play for doubled point values ($400–$2000) with all team scores carried over.</p>
+          </div>
+          <button class="btn-gold" id="bannerAdvanceDoubleBtn" type="button">⏭️ Advance to Double Jeopardy Now</button>
+        </div>
+
+        <div id="allExhaustedBanner" style="display: none; background: rgba(124, 58, 237, 0.25); border: 2px solid #a78bfa; border-radius: 12px; padding: 1rem; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <strong style="color: var(--gold);">🌟 Both Single &amp; Double Jeopardy Completed!</strong>
+            <p style="font-size: 0.86rem; color: #e2e8f0;">Ready to launch the Final Jeopardy round.</p>
+          </div>
+          <button class="btn-gold" id="bannerFinalJeopardyBtn" type="button">Launch Final Jeopardy Now</button>
+        </div>
+
+        <div class="board-grid" id="boardGrid"></div>
+      </div>
+    </section>
+
+    <aside class="scoreboard-panel">
+      <div class="panel-header">
+        <h2>Lobby &amp; Live Roster</h2>
+        <span id="playerCountBadge" style="font-size: 0.85rem; color: var(--text-muted);">0 Teams</span>
+      </div>
+      <div class="player-list" id="playerList"></div>
+    </aside>
+  </main>
+
+  <!-- Active Regular Clue Modal -->
+  <div class="modal-backdrop" id="clueModalBackdrop">
+    <div class="clue-modal">
+      <div style="display: flex; justify-content: space-between; color: var(--gold); font-weight: 900;">
+        <span id="modalCategory">CATEGORY</span>
+        <span id="modalPoints">$200</span>
+      </div>
+      <div class="clue-question" id="modalQuestion"></div>
+      <div class="host-answer-box">
+        <strong>🔒 PRIVATE HOST ANSWER (Hidden on /screen):</strong> <span id="modalAnswer"></span>
+      </div>
+      <div class="buzzer-banner" id="modalBuzzerBanner">🔒 Buzzer is locked</div>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem;">
+        <button class="btn-gold" id="openBuzzerBtn" type="button">🔔 Open Buzzer</button>
+        <button class="btn-green" id="correctBtn" type="button" disabled>✅ Correct (+Points)</button>
+        <button class="btn-red" id="incorrectBtn" type="button" disabled>❌ Incorrect (-Points &amp; Re-Open)</button>
+        <button class="btn-secondary" id="closeClueBtn" type="button">✖ Close / Mark Used</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Final Jeopardy Host Modal -->
+  <div class="modal-backdrop" id="finalJeopardyModalBackdrop">
+    <div class="clue-modal" style="max-width: 980px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,204,0,0.3); padding-bottom: 0.75rem;">
+        <span style="color: var(--gold); font-weight: 900; font-size: 1.2rem;">🌟 FINAL JEOPARDY ROUND</span>
+        <span class="timer-pill" id="fjCountdownDisplay">30s</span>
+      </div>
+
+      <div id="fjHostSetupBox" style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left; background: rgba(0,0,0,0.35); padding: 1rem; border-radius: 12px;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
+          <div>
+            <label style="font-size: 0.75rem; color: var(--gold); font-weight: 800;">FINAL CATEGORY</label>
+            <input id="fjModalCategoryInput" type="text" placeholder="Enter Final Jeopardy Category" />
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; color: var(--gold); font-weight: 800;">COUNTDOWN TIMER (SECONDS)</label>
+            <input id="fjModalTimerInput" type="number" min="5" max="300" value="30" />
+          </div>
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; color: var(--gold); font-weight: 800;">FINAL CLUE TEXT</label>
+          <input id="fjModalQuestionInput" type="text" placeholder="Enter Final Jeopardy Clue..." />
+        </div>
+        <div>
+          <label style="font-size: 0.75rem; color: var(--gold); font-weight: 800;">FINAL CORRECT ANSWER</label>
+          <input id="fjModalAnswerInput" type="text" placeholder="Enter Correct Final Response..." />
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.4rem;">
+          <button class="btn-secondary" id="fjCloseModalBtn" type="button">Cancel</button>
+          <button class="btn-gold" id="fjBeginWagerPhaseBtn" type="button">1️⃣ Open Player Wager Phase</button>
+        </div>
+      </div>
+
+      <div id="fjActiveStageBox" style="display: none; flex-direction: column; gap: 1rem;">
+        <div style="font-size: 1.1rem; color: var(--gold); font-weight: 800;" id="fjLiveCategoryTitle"></div>
+        <div class="clue-question" id="fjLiveQuestionText" style="font-size: 1.65rem; padding: 0.5rem 0;">
+          Players are currently locking in their wagers...
+        </div>
+        <div class="host-answer-box">
+          <strong>FINAL ANSWER KEY:</strong> <span id="fjLiveAnswerText"></span>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+          <button class="btn-gold" id="fjStartClueTimerBtn" type="button">2️⃣ Reveal Clue &amp; Start Countdown Timer</button>
+          <button class="btn-green" id="fjRevealAnswerBtn" type="button">3️⃣ Reveal Answer &amp; Grade Wagers</button>
+          <button class="btn-purple" id="fjFinishToPodiumBtn" type="button">🏆 Finish to Winner Podium</button>
+        </div>
+
+        <div class="fj-submissions-grid" id="fjPlayerSubmissionsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Game Podium Modal -->
+  <div class="modal-backdrop" id="podiumModalBackdrop">
+    <div class="clue-modal" style="max-width: 820px;">
+      <h2 style="font-size: 2rem; color: var(--gold);">🏆 FINAL WINNER PODIUM 🏆</h2>
+      <p id="podiumHeadline" style="font-size: 1.2rem; color: #e2e8f0;"></p>
+      <div class="podium-scroll-list" id="podiumListContainer"></div>
+      <div style="display: flex; justify-content: center; gap: 1rem;">
+        <button class="btn-gold" id="playAgainBtn" type="button">🔄 Reset &amp; Play Again</button>
+        <button class="btn-secondary" id="closePodiumBtn" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const STORAGE_KEY = 'jeopardy_host_saved_board_v4';
+    const socket = typeof io !== 'undefined' ? io() : null;
+    let roomState = null;
+    let draftRounds = [];
+    let draftEnableDouble = false;
+    let draftFinal = { category: '', question: '', answer: '', timerDuration: 30 };
+    let setupEditingRoundIdx = 0; // 0 = Single Jeopardy, 1 = Double Jeopardy
+    let showingSetup = true;
+    let isRawJsonOpen = false;
+
+    function createEmptyDraft() {
+      const singlePts = [200, 400, 600, 800, 1000];
+      const doublePts = [400, 800, 1200, 1600, 2000];
+      return {
+        rounds: [
+          {
+            key: 'jeopardy',
+            name: 'Single Jeopardy',
+            categories: Array.from({ length: 5 }, () => ({
+              title: '',
+              clues: singlePts.map((p) => ({ points: p, question: '', answer: '', used: false }))
+            }))
+          },
+          {
+            key: 'doubleJeopardy',
+            name: 'Double Jeopardy',
+            categories: Array.from({ length: 5 }, () => ({
+              title: '',
+              clues: doublePts.map((p) => ({ points: p, question: '', answer: '', used: false }))
+            }))
+          }
+        ],
+        finalJeopardy: { category: '', question: '', answer: '', timerDuration: 30 }
+      };
+    }
+
+    // Build unified single-file JSON schema: { jeopardy, doubleJeopardy, finalJeopardy }
+    function buildUnifiedJsonObject() {
+      return {
+        enableDoubleJeopardy: Boolean(draftEnableDouble),
+        jeopardy: {
+          categories: (draftRounds[0]?.categories || []).map((c) => ({
+            title: c.title || '',
+            clues: (c.clues || []).map((q) => ({
+              points: Number(q.points) || 200,
+              question: q.question || '',
+              answer: q.answer || ''
+            }))
+          }))
+        },
+        doubleJeopardy: draftEnableDouble
+          ? {
+              categories: (draftRounds[1]?.categories || []).map((c) => ({
+                title: c.title || '',
+                clues: (c.clues || []).map((q) => ({
+                  points: Number(q.points) || 400,
+                  question: q.question || '',
+                  answer: q.answer || ''
+                }))
+              }))
+            }
+          : undefined,
+        finalJeopardy: {
+          category: draftFinal.category || '',
+          question: draftFinal.question || '',
+          answer: draftFinal.answer || '',
+          timerDuration: Number(draftFinal.timerDuration) || 30
+        }
+      };
+    }
+
+    // Validate and normalize imported or edited JSON (supports unified { jeopardy, doubleJeopardy, finalJeopardy } or legacy { rounds })
+    function validateAndParseUnifiedJson(parsed) {
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Root JSON must be a valid object.');
+      }
+
+      const normalizeCatList = (cats, baseStep, sectionLabel) => {
+        if (!Array.isArray(cats) || cats.length === 0) {
+          throw new Error(`"${sectionLabel}" must contain a non-empty "categories" array.`);
+        }
+        return cats.map((cat, cIdx) => {
+          if (!cat || typeof cat !== 'object') {
+            throw new Error(`${sectionLabel} category #${cIdx + 1} is invalid.`);
+          }
+          const cluesRaw = cat.clues || cat.questions;
+          if (!Array.isArray(cluesRaw) || cluesRaw.length === 0) {
+            throw new Error(`${sectionLabel} category #${cIdx + 1} must contain a "clues" array.`);
+          }
+          return {
+            title: String(cat.title ?? cat.name ?? '').trim(),
+            clues: cluesRaw.map((clue, qIdx) => ({
+              points: Number(clue?.points ?? clue?.value) || (qIdx + 1) * baseStep,
+              question: String(clue?.question ?? clue?.clue ?? clue?.prompt ?? '').trim(),
+              answer: String(clue?.answer ?? clue?.response ?? '').trim(),
+              used: Boolean(clue?.used)
+            }))
+          };
+        });
+      };
+
+      let singleCats = null;
+      let doubleCats = null;
+
+      if (parsed.jeopardy) {
+        const rawJ = Array.isArray(parsed.jeopardy) ? parsed.jeopardy : parsed.jeopardy.categories;
+        singleCats = normalizeCatList(rawJ, 200, 'jeopardy');
+      } else if (Array.isArray(parsed.rounds) && parsed.rounds[0]) {
+        singleCats = normalizeCatList(parsed.rounds[0].categories, 200, 'rounds[0]');
+      } else {
+        throw new Error('Missing "jeopardy" section in JSON.');
+      }
+
+      const emptyFallback = createEmptyDraft();
+      let hasDouble = false;
+      if (parsed.doubleJeopardy) {
+        const rawDJ = Array.isArray(parsed.doubleJeopardy) ? parsed.doubleJeopardy : parsed.doubleJeopardy.categories;
+        if (Array.isArray(rawDJ) && rawDJ.length > 0) {
+          doubleCats = normalizeCatList(rawDJ, 400, 'doubleJeopardy');
+          hasDouble = computeRoundStats({ categories: doubleCats }).complete;
+        }
+      } else if (Array.isArray(parsed.rounds) && parsed.rounds[1]) {
+        doubleCats = normalizeCatList(parsed.rounds[1].categories, 400, 'rounds[1]');
+        hasDouble = computeRoundStats({ categories: doubleCats }).complete;
+      }
+      if (!doubleCats) {
+        doubleCats = emptyFallback.rounds[1].categories;
+      }
+      const enableDouble = typeof parsed.enableDoubleJeopardy === 'boolean' ? parsed.enableDoubleJeopardy : hasDouble;
+
+      const fjSource = parsed.finalJeopardy || parsed.final || {};
+      const dur = Number(fjSource.timerDuration);
+      const normalizedFinal = {
+        category: String(fjSource.category ?? '').trim(),
+        question: String(fjSource.question ?? fjSource.clue ?? fjSource.prompt ?? '').trim(),
+        answer: String(fjSource.answer ?? fjSource.response ?? '').trim(),
+        timerDuration: !Number.isNaN(dur) && dur >= 5 && dur <= 300 ? dur : 30
+      };
+
+      return {
+        enableDoubleJeopardy: enableDouble,
+        rounds: [
+          { key: 'jeopardy', name: 'Single Jeopardy', categories: singleCats },
+          { key: 'doubleJeopardy', name: 'Double Jeopardy', categories: doubleCats }
+        ],
+        finalJeopardy: normalizedFinal
+      };
+    }
+
+    function loadSavedDraftFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        const normalized = validateAndParseUnifiedJson(parsed);
+        return {
+          roomCode: parsed.roomCode || '',
+          enableDoubleJeopardy: Boolean(normalized.enableDoubleJeopardy),
+          rounds: normalized.rounds,
+          finalJeopardy: normalized.finalJeopardy
+        };
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function saveDraftToStorage(customRoomCode) {
+      try {
+        const unified = buildUnifiedJsonObject();
+        unified.roomCode = customRoomCode || (roomState && roomState.code) || '';
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(unified));
+      } catch (_) {}
+    }
+
+    function computeRoundStats(round) {
+      let totalCats = 0;
+      let filledCats = 0;
+      let totalClues = 0;
+      let filledClues = 0;
+      if (round && Array.isArray(round.categories)) {
+        round.categories.forEach((c) => {
+          totalCats++;
+          if (c.title && c.title.trim()) filledCats++;
+          (c.clues || []).forEach((q) => {
+            totalClues++;
+            if (q.question && q.question.trim() && q.answer && q.answer.trim() && Number(q.points) > 0) {
+              filledClues++;
+            }
+          });
+        });
+      }
+      const complete = totalCats > 0 && filledCats === totalCats && totalClues > 0 && filledClues === totalClues;
+      return { totalCats, filledCats, totalClues, filledClues, complete };
+    }
+
+    function computeDraftCompletion() {
+      const s = computeRoundStats(draftRounds[0]);
+      const d = computeRoundStats(draftRounds[1]);
+      return {
+        single: s,
+        double: d,
+        allComplete: draftEnableDouble ? (s.complete && d.complete) : s.complete
+      };
+    }
+
+    function updateCompletionUI() {
+      const stats = computeDraftCompletion();
+      document.getElementById('completionStatusBadge').textContent = draftEnableDouble
+        ? `Single: ${stats.single.filledClues}/${stats.single.totalClues} • Double: ${stats.double.filledClues}/${stats.double.totalClues} Clues`
+        : `Single Jeopardy: ${stats.single.filledClues}/${stats.single.totalClues} Clues (Double Jeopardy Optional / Off)`;
+
+      const startBtn = document.getElementById('startGameBtn');
+      startBtn.disabled = !stats.allComplete;
+      const totalFilled = draftEnableDouble ? (stats.single.filledClues + stats.double.filledClues) : stats.single.filledClues;
+      const totalRequired = draftEnableDouble ? (stats.single.totalClues + stats.double.totalClues) : stats.single.totalClues;
+      startBtn.textContent = stats.allComplete
+        ? '🚀 Start Game Now!'
+        : `🚀 Start Game (${totalFilled}/${totalRequired} Clues Ready)`;
+    }
+
+    function renderManualEditor() {
+      document.getElementById('fjCategoryInput').value = draftFinal.category || '';
+      document.getElementById('fjQuestionInput').value = draftFinal.question || '';
+      document.getElementById('fjAnswerInput').value = draftFinal.answer || '';
+      document.getElementById('fjTimerSelect').value = String(draftFinal.timerDuration || 30);
+
+      const cb = document.getElementById('enableDoubleJeopardyCheckbox');
+      if (cb) cb.checked = Boolean(draftEnableDouble);
+      const doubleTabBtn = document.getElementById('setupTabDoubleBtn');
+      if (doubleTabBtn) {
+        doubleTabBtn.style.display = draftEnableDouble ? 'inline-flex' : 'none';
+        doubleTabBtn.className = 'round-setup-tab' + (setupEditingRoundIdx === 1 ? ' active' : '');
+      }
+      if (!draftEnableDouble && setupEditingRoundIdx === 1) {
+        setupEditingRoundIdx = 0;
+      }
+      document.getElementById('setupTabSingleBtn').className =
+        'round-setup-tab' + (setupEditingRoundIdx === 0 ? ' active' : '');
+
+      const container = document.getElementById('manualEditorCategoriesList');
+      container.innerHTML = '';
+      const round = draftRounds[setupEditingRoundIdx] || draftRounds[0];
+      if (!round) return;
+
+      const defaultStep = setupEditingRoundIdx === 0 ? 200 : 400;
+
+      round.categories.forEach((cat, cIdx) => {
+        const card = document.createElement('div');
+        card.className = 'category-editor-card';
+
+        const headerRow = document.createElement('div');
+        headerRow.style.display = 'flex';
+        headerRow.style.gap = '0.6rem';
+        headerRow.style.alignItems = 'center';
+
+        const catInput = document.createElement('input');
+        catInput.type = 'text';
+        catInput.value = cat.title;
+        catInput.placeholder = `[${round.name}] Category #${cIdx + 1} Title (Required)`;
+        catInput.addEventListener('input', (e) => {
+          cat.title = e.target.value;
+          updateCompletionUI();
+        });
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn-red';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => {
+          if (round.categories.length > 1) {
+            round.categories.splice(cIdx, 1);
+            renderManualEditor();
+            updateCompletionUI();
+          }
+        });
+
+        headerRow.appendChild(catInput);
+        headerRow.appendChild(removeBtn);
+        card.appendChild(headerRow);
+
+        cat.clues.forEach((clue, qIdx) => {
+          const row = document.createElement('div');
+          row.className = 'clue-row-grid';
+
+          const ptsInput = document.createElement('input');
+          ptsInput.type = 'number';
+          ptsInput.step = String(defaultStep);
+          ptsInput.value = clue.points;
+          ptsInput.addEventListener('input', (e) => {
+            clue.points = Number(e.target.value) || (qIdx + 1) * defaultStep;
+            updateCompletionUI();
+          });
+
+          const qInput = document.createElement('input');
+          qInput.type = 'text';
+          qInput.value = clue.question;
+          qInput.placeholder = `$${clue.points} Clue / Question Text (Required)`;
+          qInput.addEventListener('input', (e) => {
+            clue.question = e.target.value;
+            updateCompletionUI();
+          });
+
+          const aInput = document.createElement('input');
+          aInput.type = 'text';
+          aInput.value = clue.answer;
+          aInput.placeholder = `$${clue.points} Correct Answer (Required)`;
+          aInput.addEventListener('input', (e) => {
+            clue.answer = e.target.value;
+            updateCompletionUI();
+          });
+
+          row.appendChild(ptsInput);
+          row.appendChild(qInput);
+          row.appendChild(aInput);
+          card.appendChild(row);
+        });
+
+        container.appendChild(card);
+      });
+
+      updateCompletionUI();
+    }
+
+    function openRawJsonEditor() {
+      showingSetup = true;
+      isRawJsonOpen = true;
+      document.getElementById('rawJsonTextarea').value = JSON.stringify(buildUnifiedJsonObject(), null, 2);
+      document.getElementById('rawJsonErrorMsg').style.display = 'none';
+      document.getElementById('rawJsonEditorPanel').style.display = 'flex';
+      document.getElementById('visualCategoriesWrapper').style.display = 'none';
+      renderAll();
+    }
+
+    function closeRawJsonEditor() {
+      isRawJsonOpen = false;
+      document.getElementById('rawJsonEditorPanel').style.display = 'none';
+      document.getElementById('visualCategoriesWrapper').style.display = 'block';
+      renderManualEditor();
+    }
+
+    function initHost() {
+      const saved = loadSavedDraftFromStorage();
+      const empty = createEmptyDraft();
+      draftRounds = saved && Array.isArray(saved.rounds) ? saved.rounds : empty.rounds;
+      draftEnableDouble = Boolean(saved && saved.enableDoubleJeopardy);
+      draftFinal = saved && saved.finalJeopardy ? saved.finalJeopardy : empty.finalJeopardy;
+
+      const initialCode = (saved && saved.roomCode) || '';
+      if (initialCode) {
+        document.getElementById('customRoomCodeInput').value = initialCode;
+      }
+
+      renderManualEditor();
+
+      if (!socket) return;
+      socket.emit('host_create_or_join', { roomCode: initialCode }, (res) => {
+        if (res && res.ok) {
+          roomState = res.state;
+          document.getElementById('customRoomCodeInput').value = roomState.code;
+          const unified = buildUnifiedJsonObject();
+          socket.emit('host_save_board', {
+            roomCode: roomState.code,
+            ...unified
+          });
+          renderAll();
+        }
+      });
+
+      socket.on('room_state', (state) => {
+        roomState = state;
+        renderAll();
+      });
+
+      socket.on('final_timer_tick', ({ timeLeft }) => {
+        if (roomState && roomState.finalJeopardy) {
+          roomState.finalJeopardy.timeLeft = timeLeft;
+          document.getElementById('fjCountdownDisplay').textContent = `${timeLeft}s`;
+        }
+      });
+    }
+
+    function renderAll() {
+      if (!roomState) return;
+      document.getElementById('roomCodeDisplay').textContent = roomState.code;
+      document.getElementById('statusMessage').textContent = roomState.lastActionMessage || '';
+
+      const setupEl = document.getElementById('setupLobbySection');
+      const boardEl = document.getElementById('liveBoardSection');
+
+      if (!roomState.gameStarted || showingSetup) {
+        setupEl.style.display = 'flex';
+        boardEl.style.display = 'none';
+      } else {
+        setupEl.style.display = 'none';
+        boardEl.style.display = 'flex';
+      }
+
+      const hasDoubleLive = Boolean(roomState.enableDoubleJeopardy);
+      document.getElementById('liveRoundSingleBtn').className =
+        'round-setup-tab' + (roomState.currentRoundIndex === 0 ? ' active' : '');
+      const liveDoubleBtn = document.getElementById('liveRoundDoubleBtn');
+      const advDoubleBtn = document.getElementById('advanceToDoubleJeopardyBtn');
+      const hdrDoubleBtn = document.getElementById('headerAdvanceDoubleBtn');
+      if (liveDoubleBtn) {
+        liveDoubleBtn.style.display = hasDoubleLive ? 'inline-flex' : 'none';
+        liveDoubleBtn.className = 'round-setup-tab' + (roomState.currentRoundIndex === 1 ? ' active' : '');
+      }
+      if (advDoubleBtn) advDoubleBtn.style.display = hasDoubleLive ? 'inline-flex' : 'none';
+      if (hdrDoubleBtn) hdrDoubleBtn.style.display = hasDoubleLive ? 'inline-flex' : 'none';
+
+      const isSingleExhausted =
+        roomState.gameStarted &&
+        roomState.currentRoundIndex === 0 &&
+        roomState.currentRoundExhausted &&
+        !roomState.allCluesExhausted;
+
+      document.getElementById('singleExhaustedBanner').style.display = isSingleExhausted ? 'flex' : 'none';
+      document.getElementById('allExhaustedBanner').style.display = roomState.allCluesExhausted ? 'flex' : 'none';
+
+      renderBoard();
+      renderScoreboard();
+      renderClueModal();
+      renderFinalJeopardyModal();
+      renderPodiumModal();
+    }
+
+    function renderBoard() {
+      const grid = document.getElementById('boardGrid');
+      grid.innerHTML = '';
+      const currentRound = roomState.rounds[roomState.currentRoundIndex];
+      if (!currentRound || !currentRound.categories.length) return;
+
+      const numCols = currentRound.categories.length;
+      const numRows = Math.max(...currentRound.categories.map((c) => c.clues.length));
+      grid.style.gridTemplateColumns = `repeat(${numCols}, minmax(135px, 1fr))`;
+
+      currentRound.categories.forEach((cat) => {
+        const header = document.createElement('div');
+        header.className = 'category-cell';
+        header.textContent = cat.title || 'CATEGORY';
+        grid.appendChild(header);
+      });
+
+      for (let qIdx = 0; qIdx < numRows; qIdx++) {
+        for (let cIdx = 0; cIdx < numCols; cIdx++) {
+          const clue = currentRound.categories[cIdx].clues[qIdx];
+          const tile = document.createElement('button');
+          tile.type = 'button';
+          const isUsed = !clue || clue.used;
+          tile.className = 'clue-tile' + (isUsed ? ' used' : '');
+          tile.textContent = isUsed ? '' : `$${clue.points}`;
+          tile.disabled = isUsed;
+          tile.addEventListener('click', () => {
+            socket.emit('host_select_clue', {
+              roomCode: roomState.code,
+              roundIndex: roomState.currentRoundIndex,
+              catIndex: cIdx,
+              clueIndex: qIdx
+            });
+          });
+          grid.appendChild(tile);
+        }
+      }
+    }
+
+    function renderScoreboard() {
+      const list = document.getElementById('playerList');
+      const countBadge = document.getElementById('playerCountBadge');
+      const players = roomState.players || [];
+      countBadge.textContent = `${players.length} Team${players.length === 1 ? '' : 's'}`;
+
+      if (players.length === 0) {
+        list.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">0 teams connected. Teams can join Room <strong>${roomState.code}</strong> at <code>/play</code> (supports 10+ teams).</p>`;
+        return;
+      }
+
+      list.innerHTML = '';
+      players.forEach((p, rankIdx) => {
+        const isBuzzed = roomState.buzzedPlayerId === p.id;
+        const card = document.createElement('div');
+        card.className = 'player-card' + (isBuzzed ? ' buzzed' : '');
+
+        const left = document.createElement('div');
+        left.innerHTML = `
+          <div style="font-weight: 800; font-size: 0.92rem;">#${rankIdx + 1} ${p.name} ${isBuzzed ? '🔔' : ''}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">${p.connected ? '🟢 Connected' : '⚪ Disconnected'}</div>
+        `;
+
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.alignItems = 'center';
+        right.style.gap = '0.55rem';
+
+        const scoreEl = document.createElement('div');
+        scoreEl.className = 'player-score';
+        scoreEl.textContent = `${p.score < 0 ? '-' : ''}$${Math.abs(p.score)}`;
+
+        const kickBtn = document.createElement('button');
+        kickBtn.type = 'button';
+        kickBtn.className = 'btn-kick';
+        kickBtn.title = `Kick ${p.name} from room`;
+        kickBtn.textContent = '✕ Kick';
+        kickBtn.addEventListener('click', () => {
+          socket.emit('host_kick_player', { roomCode: roomState.code, playerId: p.id });
+        });
+
+        right.appendChild(scoreEl);
+        right.appendChild(kickBtn);
+        card.appendChild(left);
+        card.appendChild(right);
+        list.appendChild(card);
+      });
+    }
+
+    function renderClueModal() {
+      const backdrop = document.getElementById('clueModalBackdrop');
+      const clue = roomState.activeClue;
+      if (!clue) {
+        backdrop.classList.remove('open');
+        return;
+      }
+      backdrop.classList.add('open');
+      document.getElementById('modalCategory').textContent = clue.category;
+      document.getElementById('modalPoints').textContent = `$${clue.points}`;
+      document.getElementById('modalQuestion').textContent = clue.question;
+      document.getElementById('modalAnswer').textContent = clue.answer || '';
+
+      const banner = document.getElementById('modalBuzzerBanner');
+      const openBtn = document.getElementById('openBuzzerBtn');
+      const correctBtn = document.getElementById('correctBtn');
+      const incorrectBtn = document.getElementById('incorrectBtn');
+
+      if (roomState.buzzedPlayerId) {
+        banner.textContent = `🔔 ${roomState.buzzedPlayerName} BUZZED IN FIRST!`;
+        openBtn.disabled = true;
+        correctBtn.disabled = false;
+        incorrectBtn.disabled = false;
+      } else if (roomState.buzzerOpen) {
+        banner.textContent = '🟢 BUZZER IS OPEN! Waiting for a player to buzz in...';
+        openBtn.disabled = true;
+        correctBtn.disabled = true;
+        incorrectBtn.disabled = true;
+      } else {
+        banner.textContent = '🔒 Buzzer is locked — click "Open Buzzer" when ready';
+        openBtn.disabled = false;
+        correctBtn.disabled = true;
+        incorrectBtn.disabled = true;
+      }
+    }
+
+    function renderFinalJeopardyModal() {
+      const backdrop = document.getElementById('finalJeopardyModalBackdrop');
+      const fj = roomState.finalJeopardy;
+      if (!fj || !fj.active) {
+        return;
+      }
+      backdrop.classList.add('open');
+      document.getElementById('fjHostSetupBox').style.display = 'none';
+      document.getElementById('fjActiveStageBox').style.display = 'flex';
+      document.getElementById('fjCountdownDisplay').textContent = `${fj.timeLeft}s`;
+      document.getElementById('fjLiveCategoryTitle').textContent = `CATEGORY: ${fj.category}`;
+      document.getElementById('fjLiveAnswerText').textContent = fj.answer || '';
+
+      if (fj.stage === 'wager') {
+        document.getElementById('fjLiveQuestionText').textContent =
+          'Wager Phase Open — Teams are submitting their wagers now. Click "Reveal Clue & Start Countdown Timer" when ready.';
+      } else {
+        document.getElementById('fjLiveQuestionText').textContent = fj.question;
+      }
+
+      const subList = document.getElementById('fjPlayerSubmissionsList');
+      subList.innerHTML = '';
+      (roomState.players || []).forEach((p) => {
+        const hasWager = (fj.submittedWagerPlayerIds || []).includes(p.id);
+        const wagerAmt = fj.wagers && fj.wagers[p.id] !== undefined ? fj.wagers[p.id] : 0;
+        const respText = (fj.responses && fj.responses[p.id]) || '(No response submitted)';
+        const judgedState = fj.judged && fj.judged[p.id];
+
+        const row = document.createElement('div');
+        row.style.background = 'rgba(15, 23, 42, 0.88)';
+        row.style.border = '1px solid var(--border)';
+        row.style.borderRadius = '10px';
+        row.style.padding = '0.75rem 0.9rem';
+        row.style.display = 'flex';
+        row.style.flexDirection = 'column';
+        row.style.justifyContent = 'space-between';
+        row.style.gap = '0.5rem';
+
+        const left = document.createElement('div');
+        left.innerHTML = `
+          <div style="font-weight: 800;">${p.name} (Score: $${p.score})</div>
+          <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 0.2rem;">
+            Wager: <strong>${hasWager ? '$' + wagerAmt : 'Waiting...'}</strong>
+            ${fj.stage !== 'wager' ? `<br/>Response: <strong>"${respText}"</strong>` : ''}
+          </div>
+        `;
+
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.gap = '0.5rem';
+
+        if (judgedState) {
+          right.innerHTML = `<span style="font-weight: 800; color: ${judgedState === 'correct' ? '#34d399' : '#f87171'};">${judgedState.toUpperCase()}</span>`;
+        } else if (fj.stage === 'grading' || fj.answerRevealed) {
+          const cBtn = document.createElement('button');
+          cBtn.type = 'button';
+          cBtn.className = 'btn-green';
+          cBtn.textContent = `✅ +$${wagerAmt}`;
+          cBtn.addEventListener('click', () => {
+            socket.emit('host_judge_final', { roomCode: roomState.code, playerId: p.id, correct: true });
+          });
+
+          const iBtn = document.createElement('button');
+          iBtn.type = 'button';
+          iBtn.className = 'btn-red';
+          iBtn.textContent = `❌ -$${wagerAmt}`;
+          iBtn.addEventListener('click', () => {
+            socket.emit('host_judge_final', { roomCode: roomState.code, playerId: p.id, correct: false });
+          });
+
+          right.appendChild(cBtn);
+          right.appendChild(iBtn);
+        }
+
+        row.appendChild(left);
+        row.appendChild(right);
+        subList.appendChild(row);
+      });
+    }
+
+    function renderPodiumModal() {
+      const backdrop = document.getElementById('podiumModalBackdrop');
+      if (!roomState.gameEnded) {
+        backdrop.classList.remove('open');
+        return;
+      }
+      backdrop.classList.add('open');
+      const podium = roomState.podium || [];
+      const headline = document.getElementById('podiumHeadline');
+      const list = document.getElementById('podiumListContainer');
+      list.innerHTML = '';
+
+      if (!podium.length) {
+        headline.textContent = 'Game Complete!';
+        return;
+      }
+      headline.textContent = `🎉 Champion: ${podium[0].name} with $${podium[0].score}! 🎉`;
+      const medals = ['🥇 1st', '🥈 2nd', '🥉 3rd'];
+      podium.forEach((p, idx) => {
+        const item = document.createElement('div');
+        item.className = 'player-card' + (idx === 0 ? ' buzzed' : '');
+        item.innerHTML = `
+          <span style="font-weight: 800;">${medals[idx] || '#' + (idx + 1)} — ${p.name}</span>
+          <span class="player-score">$${p.score}</span>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // --- Event Listeners ---
+    document.getElementById('setupTabSingleBtn').addEventListener('click', () => {
+      setupEditingRoundIdx = 0;
+      renderManualEditor();
+    });
+
+    document.getElementById('setupTabDoubleBtn').addEventListener('click', () => {
+      setupEditingRoundIdx = 1;
+      renderManualEditor();
+    });
+
+    document.getElementById('enableDoubleJeopardyCheckbox').addEventListener('change', (e) => {
+      draftEnableDouble = Boolean(e.target.checked);
+      if (draftEnableDouble) {
+        setupEditingRoundIdx = 1;
+      } else {
+        setupEditingRoundIdx = 0;
+      }
+      renderManualEditor();
+      persistAndSaveGame();
+    });
+
+    document.getElementById('fjCategoryInput').addEventListener('input', (e) => {
+      draftFinal.category = e.target.value;
+    });
+    document.getElementById('fjQuestionInput').addEventListener('input', (e) => {
+      draftFinal.question = e.target.value;
+    });
+    document.getElementById('fjAnswerInput').addEventListener('input', (e) => {
+      draftFinal.answer = e.target.value;
+    });
+    document.getElementById('fjTimerSelect').addEventListener('change', (e) => {
+      draftFinal.timerDuration = Number(e.target.value) || 30;
+    });
+
+    // Unified JSON Import / Upload
+    document.getElementById('importJsonFileBtn').addEventListener('click', () => {
+      document.getElementById('importJsonFileInput').click();
+    });
+
+    document.getElementById('importJsonFileInput').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const parsed = JSON.parse(String(evt.target.result || ''));
+          const normalized = validateAndParseUnifiedJson(parsed);
+          draftRounds = normalized.rounds;
+          draftEnableDouble = Boolean(normalized.enableDoubleJeopardy);
+          draftFinal = normalized.finalJeopardy;
+          if (isRawJsonOpen) {
+            document.getElementById('rawJsonTextarea').value = JSON.stringify(buildUnifiedJsonObject(), null, 2);
+          }
+          renderManualEditor();
+          persistAndSaveGame();
+          document.getElementById('statusMessage').textContent =
+            `📂 Imported "${file.name}" (Single, Double & Final Jeopardy) and saved to board!`;
+        } catch (err) {
+          document.getElementById('statusMessage').textContent =
+            `❌ JSON Import Validation Error: ${err.message}`;
+        }
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+
+    // Raw JSON Editor Toggle & Save
+    document.getElementById('toggleJsonEditorBtn').addEventListener('click', () => {
+      if (isRawJsonOpen) {
+        closeRawJsonEditor();
+      } else {
+        openRawJsonEditor();
+      }
+    });
+
+    document.getElementById('headerRawJsonBtn').addEventListener('click', () => {
+      openRawJsonEditor();
+    });
+
+    document.getElementById('closeRawJsonBtn').addEventListener('click', () => {
+      closeRawJsonEditor();
+    });
+
+    document.getElementById('applyRawJsonBtn').addEventListener('click', () => {
+      const rawText = document.getElementById('rawJsonTextarea').value;
+      const errBox = document.getElementById('rawJsonErrorMsg');
+      try {
+        const parsed = JSON.parse(rawText);
+        const normalized = validateAndParseUnifiedJson(parsed);
+        draftRounds = normalized.rounds;
+        draftFinal = normalized.finalJeopardy;
+        errBox.style.display = 'none';
+        closeRawJsonEditor();
+        persistAndSaveGame();
+        document.getElementById('statusMessage').textContent =
+          '✅ Validated and saved unified multi-round JSON to game board!';
+      } catch (err) {
+        errBox.textContent = '⚠️ JSON Validation Error: ' + err.message;
+        errBox.style.display = 'block';
+      }
+    });
+
+    document.getElementById('applyRoomCodeBtn').addEventListener('click', () => {
+      const desired = document.getElementById('customRoomCodeInput').value.trim().toUpperCase();
+      if (!socket || !roomState) return;
+      socket.emit('host_set_room_code', { currentCode: roomState.code, newCode: desired }, (res) => {
+        if (res && res.ok) {
+          roomState = res.state;
+          document.getElementById('customRoomCodeInput').value = roomState.code;
+          saveDraftToStorage(roomState.code);
+          renderAll();
+        } else if (res && res.error) {
+          document.getElementById('statusMessage').textContent = res.error;
+        }
+      });
+    });
+
+    function persistAndSaveGame() {
+      const desiredCode = document.getElementById('customRoomCodeInput').value.trim().toUpperCase();
+      saveDraftToStorage(desiredCode || (roomState && roomState.code));
+      if (!socket || !roomState) return;
+      const unified = buildUnifiedJsonObject();
+      socket.emit(
+        'host_save_board',
+        {
+          roomCode: roomState.code,
+          ...unified
+        },
+        (res) => {
+          if (res && res.ok) {
+            roomState = res.state;
+            document.getElementById('statusMessage').textContent =
+              '✅ Multi-round game board saved to browser storage and server!';
+            renderAll();
+          }
+        }
+      );
+    }
+
+    document.getElementById('saveGameBtn').addEventListener('click', persistAndSaveGame);
+    document.getElementById('saveGameTopBtn').addEventListener('click', persistAndSaveGame);
+
+    document.getElementById('exportJsonBtn').addEventListener('click', () => {
+      const dataStr = JSON.stringify(buildUnifiedJsonObject(), null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jeopardy-multiround-${(roomState && roomState.code) || 'board'}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('addCategorySlotBtn').addEventListener('click', () => {
+      const step = setupEditingRoundIdx === 0 ? 200 : 400;
+      const pts = [1, 2, 3, 4, 5].map((m) => m * step);
+      draftRounds[setupEditingRoundIdx].categories.push({
+        title: '',
+        clues: pts.map((p) => ({ points: p, question: '', answer: '', used: false }))
+      });
+      renderManualEditor();
+    });
+
+    document.getElementById('startGameBtn').addEventListener('click', () => {
+      if (!socket || !roomState) return;
+      persistAndSaveGame();
+      socket.emit('host_start_game', { roomCode: roomState.code }, (res) => {
+        if (res && res.ok) {
+          showingSetup = false;
+          roomState = res.state;
+          renderAll();
+        } else if (res && res.error) {
+          document.getElementById('statusMessage').textContent = res.error;
+        }
+      });
+    });
+
+    // Advance / Switch between Single Jeopardy and Double Jeopardy
+    function switchLiveRound(roundIdx) {
+      if (!socket || !roomState) return;
+      showingSetup = false;
+      socket.emit('host_change_round', { roomCode: roomState.code, roundIndex: roundIdx });
+    }
+
+    document.getElementById('liveRoundSingleBtn').addEventListener('click', () => switchLiveRound(0));
+    document.getElementById('liveRoundDoubleBtn').addEventListener('click', () => switchLiveRound(1));
+    document.getElementById('advanceToDoubleJeopardyBtn').addEventListener('click', () => switchLiveRound(1));
+    document.getElementById('bannerAdvanceDoubleBtn').addEventListener('click', () => switchLiveRound(1));
+    document.getElementById('headerAdvanceDoubleBtn').addEventListener('click', () => switchLiveRound(1));
+
+    document.getElementById('toggleSetupViewBtn').addEventListener('click', () => {
+      showingSetup = !showingSetup;
+      renderAll();
+    });
+
+    document.getElementById('openBuzzerBtn').addEventListener('click', () => {
+      socket.emit('host_open_buzzer', { roomCode: roomState.code });
+    });
+
+    document.getElementById('correctBtn').addEventListener('click', () => {
+      socket.emit('host_judge_answer', { roomCode: roomState.code, correct: true });
+    });
+
+    document.getElementById('incorrectBtn').addEventListener('click', () => {
+      socket.emit('host_judge_answer', { roomCode: roomState.code, correct: false });
+    });
+
+    document.getElementById('closeClueBtn').addEventListener('click', () => {
+      socket.emit('host_close_clue', { roomCode: roomState.code, markUsed: true });
+    });
+
+    function openFinalJeopardySetupModal() {
+      document.getElementById('fjModalCategoryInput').value = draftFinal.category || (roomState?.finalJeopardy?.category || '');
+      document.getElementById('fjModalQuestionInput').value = draftFinal.question || (roomState?.finalJeopardy?.question || '');
+      document.getElementById('fjModalAnswerInput').value = draftFinal.answer || (roomState?.finalJeopardy?.answer || '');
+      document.getElementById('fjModalTimerInput').value = draftFinal.timerDuration || 30;
+
+      document.getElementById('fjHostSetupBox').style.display = 'flex';
+      document.getElementById('fjActiveStageBox').style.display = 'none';
+      document.getElementById('finalJeopardyModalBackdrop').classList.add('open');
+    }
+
+    document.getElementById('launchFinalJeopardyBtn').addEventListener('click', openFinalJeopardySetupModal);
+    document.getElementById('advanceToFinalJeopardyBtn').addEventListener('click', openFinalJeopardySetupModal);
+    document.getElementById('bannerFinalJeopardyBtn').addEventListener('click', openFinalJeopardySetupModal);
+
+    document.getElementById('fjCloseModalBtn').addEventListener('click', () => {
+      document.getElementById('finalJeopardyModalBackdrop').classList.remove('open');
+    });
+
+    document.getElementById('fjBeginWagerPhaseBtn').addEventListener('click', () => {
+      const category = document.getElementById('fjModalCategoryInput').value.trim();
+      const question = document.getElementById('fjModalQuestionInput').value.trim();
+      const answer = document.getElementById('fjModalAnswerInput').value.trim();
+      const timerDuration = Number(document.getElementById('fjModalTimerInput').value) || 30;
+
+      draftFinal = { category, question, answer, timerDuration };
+      saveDraftToStorage(roomState && roomState.code);
+
+      socket.emit(
+        'host_start_final_jeopardy',
+        { roomCode: roomState.code, category, question, answer, timerDuration },
+        (res) => {
+          if (res && !res.ok && res.error) {
+            document.getElementById('statusMessage').textContent = res.error;
+          }
+        }
+      );
+    });
+
+    document.getElementById('fjStartClueTimerBtn').addEventListener('click', () => {
+      const dur = Number(document.getElementById('fjModalTimerInput').value) || 30;
+      socket.emit('host_start_final_timer', { roomCode: roomState.code, timerDuration: dur });
+    });
+
+    document.getElementById('fjRevealAnswerBtn').addEventListener('click', () => {
+      socket.emit('host_reveal_final_answer', { roomCode: roomState.code });
+    });
+
+    document.getElementById('fjFinishToPodiumBtn').addEventListener('click', () => {
+      document.getElementById('finalJeopardyModalBackdrop').classList.remove('open');
+      socket.emit('host_end_game', { roomCode: roomState.code });
+    });
+
+    document.getElementById('resetGameBtn').addEventListener('click', () => {
+      socket.emit('host_reset_game', { roomCode: roomState.code });
+    });
+
+    document.getElementById('endGameBtn').addEventListener('click', () => {
+      socket.emit('host_end_game', { roomCode: roomState.code });
+    });
+
+    document.getElementById('playAgainBtn').addEventListener('click', () => {
+      socket.emit('host_reset_game', { roomCode: roomState.code });
+    });
+
+    document.getElementById('closePodiumBtn').addEventListener('click', () => {
+      document.getElementById('podiumModalBackdrop').classList.remove('open');
+    });
+
+    document.getElementById('openTvScreenBtn').addEventListener('click', () => {
+      const code = (roomState && roomState.code) || '';
+      window.open('/screen' + (code ? '?room=' + encodeURIComponent(code) : ''), '_blank');
+    });
+
+    initHost();
+  </script>
+</body>
+</html>

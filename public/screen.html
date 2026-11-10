@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jeopardy! TV &amp; Projector Display (/screen)</title>
+  <style>
+    :root {
+      --bg-dark: #050814;
+      --bg-panel: #0d132a;
+      --board-blue: #060ce9;
+      --board-blue-deep: #03078a;
+      --gold: #ffcc00;
+      --gold-soft: #ffe066;
+      --text-light: #f8fafc;
+      --text-muted: #94a3b8;
+      --green: #10b981;
+      --red: #ef4444;
+      --purple: #7c3aed;
+      --border: rgba(255, 255, 255, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: radial-gradient(circle at top, #152259 0%, var(--bg-dark) 75%);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Projector Status Bar */
+    header {
+      background: rgba(8, 12, 30, 0.95);
+      border-bottom: 3px solid var(--gold);
+      padding: 0.75rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .brand h1 {
+      font-size: 1.65rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      color: var(--gold);
+      text-transform: uppercase;
+      text-shadow: 0 2px 12px rgba(255, 204, 0, 0.35);
+    }
+
+    .round-badge {
+      background: var(--board-blue);
+      border: 2px solid var(--gold);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 0.95rem;
+      padding: 0.35rem 1rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .room-pill {
+      background: #0f172a;
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      padding: 0.35rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .room-pill span {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .room-pill strong {
+      font-size: 1.5rem;
+      color: var(--gold);
+      font-family: monospace;
+      letter-spacing: 0.14em;
+    }
+
+    .btn-screen {
+      cursor: pointer;
+      background: #1e293b;
+      color: var(--text-light);
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.95rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
+    .btn-screen:hover {
+      background: #334155;
+    }
+
+    /* Join Screen Overlay */
+    .join-backdrop {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .join-card {
+      background: rgba(16, 23, 54, 0.95);
+      border: 3px solid var(--gold);
+      border-radius: 20px;
+      max-width: 480px;
+      width: 100%;
+      padding: 2.25rem;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75);
+    }
+
+    .join-card h2 {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+
+    .join-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .join-input {
+      width: 100%;
+      background: #070b19;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 12px;
+      padding: 0.95rem;
+      font-size: 1.6rem;
+      font-weight: 900;
+      font-family: monospace;
+      text-align: center;
+      text-transform: uppercase;
+      color: var(--gold);
+      letter-spacing: 0.15em;
+      margin-bottom: 1rem;
+    }
+
+    .join-input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .btn-connect {
+      width: 100%;
+      background: var(--gold);
+      color: #090d16;
+      font-weight: 900;
+      font-size: 1.1rem;
+      padding: 0.95rem;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Main Projector Stage */
+    .screen-stage {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 1.25rem 1.75rem;
+      gap: 1.25rem;
+      max-width: 1920px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Fullscreen Jeopardy Board Grid */
+    .board-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .board-grid {
+      display: grid;
+      gap: 0.75rem;
+      background: #000000;
+      padding: 0.9rem;
+      border-radius: 16px;
+      border: 4px solid #283673;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75);
+      height: 100%;
+      min-height: 480px;
+    }
+
+    .category-cell {
+      background: linear-gradient(180deg, #0b15a8 0%, #04085c 100%);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: clamp(0.95rem, 1.35vw, 1.4rem);
+      text-align: center;
+      padding: 1rem 0.65rem;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      text-shadow: 0 3px 6px rgba(0, 0, 0, 0.85);
+    }
+
+    .clue-tile {
+      background: linear-gradient(180deg, var(--board-blue) 0%, var(--board-blue-deep) 100%);
+      color: var(--gold);
+      font-weight: 900;
+      font-size: clamp(1.6rem, 2.6vw, 2.85rem);
+      text-align: center;
+      padding: 1.25rem 0.5rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 204, 0, 0.3);
+      text-shadow: 3px 4px 0px #000000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease;
+    }
+
+    .clue-tile.used {
+      background: #06091e;
+      color: transparent;
+      text-shadow: none;
+      border-color: rgba(255, 255, 255, 0.04);
+    }
+
+    /* Zero-Spoiler Active Clue Spotlight View */
+    .clue-spotlight {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      background: radial-gradient(circle at center, #0913b5 0%, #030663 100%);
+      border: 5px solid var(--gold);
+      border-radius: 24px;
+      padding: 2.5rem 3.5rem;
+      text-align: center;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85);
+      min-height: 460px;
+    }
+
+    .spotlight-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid rgba(255, 204, 0, 0.35);
+      padding-bottom: 1rem;
+      font-size: clamp(1.2rem, 2vw, 1.85rem);
+      font-weight: 900;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .spotlight-question {
+      font-size: clamp(1.85rem, 3.6vw, 3.5rem);
+      font-weight: 900;
+      line-height: 1.32;
+      color: #ffffff;
+      text-shadow: 0 4px 14px rgba(0, 0, 0, 0.75);
+      max-width: 1350px;
+      margin: 2rem auto;
+    }
+
+    .spotlight-buzzer-bar {
+      width: 100%;
+      max-width: 960px;
+      border-radius: 16px;
+      padding: 1.15rem 1.75rem;
+      font-size: clamp(1.15rem, 1.8vw, 1.65rem);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      background: rgba(8, 12, 30, 0.82);
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      align-items: center;
+    }
+
+    .spotlight-buzzer-bar.open {
+      border-color: var(--green);
+      background: rgba(6, 78, 59, 0.78);
+      color: #6ee7b7;
+    }
+
+    .spotlight-buzzer-bar.buzzed {
+      border-color: var(--gold);
+      background: rgba(255, 204, 0, 0.22);
+      color: var(--gold);
+      box-shadow: 0 0 40px rgba(255, 204, 0, 0.45);
+    }
+
+    .buzz-progress-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 999px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .buzz-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--green));
+      width: 100%;
+      transition: width 0.25s linear;
+    }
+
+    /* Final Jeopardy TV View */
+    .final-jeopardy-screen {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      background: radial-gradient(circle at center, #3b0764 0%, #090d1c 100%);
+      border: 5px solid var(--gold);
+      border-radius: 24px;
+      padding: 2.25rem 3rem;
+      text-align: center;
+      min-height: 460px;
+    }
+
+    .fj-timer-giant {
+      font-family: monospace;
+      font-size: clamp(2.4rem, 4.5vw, 4.2rem);
+      font-weight: 900;
+      color: var(--gold);
+      background: rgba(0, 0, 0, 0.6);
+      border: 3px solid var(--gold);
+      padding: 0.35rem 1.8rem;
+      border-radius: 999px;
+    }
+
+    /* Persistent Bottom Live Scoreboard Dock (Scalable for 10+ Teams) */
+    .scoreboard-dock {
+      background: rgba(10, 15, 36, 0.94);
+      border: 2px solid rgba(255, 204, 0, 0.35);
+      border-radius: 16px;
+      padding: 0.9rem 1.25rem;
+    }
+
+    .dock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.65rem;
+      font-size: 0.8rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gold);
+    }
+
+    .dock-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+      gap: 0.6rem;
+      max-height: 165px;
+      overflow-y: auto;
+    }
+
+    .team-podium-tile {
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      padding: 0.55rem 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .team-podium-tile.buzzed {
+      border-color: var(--gold);
+      background: rgba(255, 204, 0, 0.22);
+      box-shadow: 0 0 22px rgba(255, 204, 0, 0.45);
+      transform: translateY(-2px);
+    }
+
+    .team-podium-tile.locked {
+      opacity: 0.5;
+      border-color: var(--red);
+    }
+
+    .team-name-label {
+      font-weight: 800;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .team-score-label {
+      font-family: monospace;
+      font-weight: 900;
+      font-size: 1.15rem;
+      color: var(--gold);
+    }
+
+    /* Winner Podium Celebration View */
+    .winner-celebration-screen {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1e1b4b 0%, #050814 80%);
+      border: 4px solid var(--gold);
+      border-radius: 24px;
+      padding: 2.5rem;
+      text-align: center;
+      gap: 1.5rem;
+    }
+
+    .podium-standings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 0.85rem;
+      width: 100%;
+      max-width: 1100px;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>🎯 JEOPARDY! LIVE</h1>
+      <span class="round-badge" id="screenRoundBadge">Lobby</span>
+    </div>
+    <div id="screenActionBanner" style="font-size: 0.95rem; font-weight: 700; color: #e2e8f0;">
+      Connect to a Room Code to project the live game board
+    </div>
+    <div class="header-right">
+      <div class="room-pill">
+        <span>Join at /play • Code</span>
+        <strong id="screenRoomCode">----</strong>
+      </div>
+      <button class="btn-screen" id="fullscreenBtn" type="button">⛶ Fullscreen</button>
+    </div>
+  </header>
+
+  <!-- 1. Room Code Connect Screen -->
+  <div class="join-backdrop" id="screenJoinSection">
+    <div class="join-card">
+      <h2>📽️ TV / Projector Display</h2>
+      <p>Enter the Room Code from the Host Dashboard (<code>/host</code>) to display the non-spoiler game board and live scoreboard.</p>
+      <form id="screenJoinForm">
+        <input id="screenRoomInput" class="join-input" type="text" maxlength="12" placeholder="CODE" required />
+        <button class="btn-connect" type="submit">Connect Display Screen</button>
+        <div id="screenJoinError" style="color: #f87171; font-size: 0.9rem; margin-top: 0.75rem;"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Main Connected Projector Stage -->
+  <main class="screen-stage" id="screenMainStage">
+    <!-- A. Fullscreen Jeopardy Board Grid (Single & Double Jeopardy) -->
+    <section class="board-wrapper" id="screenBoardSection">
+      <div class="board-grid" id="screenBoardGrid"></div>
+    </section>
+
+    <!-- B. Zero-Spoiler Active Clue Spotlight -->
+    <section class="clue-spotlight" id="screenClueSpotlight">
+      <div class="spotlight-header">
+        <span id="spotlightCategory">CATEGORY</span>
+        <span id="spotlightPoints">$200</span>
+      </div>
+      <div class="spotlight-question" id="spotlightQuestion">
+        Clue prompt appears here
+      </div>
+      <div class="spotlight-buzzer-bar" id="spotlightBuzzerBar">
+        <div id="spotlightBuzzerText">🔒 Buzzer Locked — Listen to the Clue</div>
+        <div class="buzz-progress-track" id="buzzProgressTrack">
+          <div class="buzz-progress-fill" id="buzzProgressFill"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- C. Dedicated Final Jeopardy Screen -->
+    <section class="final-jeopardy-screen" id="screenFinalJeopardySection">
+      <div class="spotlight-header">
+        <span id="screenFjCategory">🌟 FINAL JEOPARDY</span>
+        <span class="fj-timer-giant" id="screenFjTimer">30s</span>
+      </div>
+      <div class="spotlight-question" id="screenFjPrompt" style="font-size: clamp(1.6rem, 3vw, 2.8rem);">
+        Teams are locking in their Final Jeopardy wagers...
+      </div>
+      <div id="screenFjRevealedAnswer" style="display: none; background: rgba(16, 185, 129, 0.2); border: 2px solid var(--green); padding: 0.85rem 1.75rem; border-radius: 14px; font-size: 1.5rem; font-weight: 900; color: #6ee7b7;"></div>
+      <div id="screenFjWagerStatusGrid" class="dock-grid" style="width: 100%; max-width: 1100px;"></div>
+    </section>
+
+    <!-- D. Winner Podium Celebration Screen -->
+    <section class="winner-celebration-screen" id="screenPodiumSection">
+      <div style="font-size: 4rem;">🏆</div>
+      <h2 style="font-size: 2.6rem; font-weight: 900; color: var(--gold); text-transform: uppercase;">Final Jeopardy! Champions</h2>
+      <p id="screenChampionHeadline" style="font-size: 1.5rem; font-weight: 800; color: #ffffff;"></p>
+      <div class="podium-standings-grid" id="screenPodiumGrid"></div>
+    </section>
+
+    <!-- Persistent Bottom Live Scoreboard Dock -->
+    <footer class="scoreboard-dock">
+      <div class="dock-header">
+        <span>Live Team Scoreboard &amp; Buzzer Status</span>
+        <span id="screenTeamCountLabel">0 Teams Connected</span>
+      </div>
+      <div class="dock-grid" id="screenScoreboardDock"></div>
+    </footer>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = typeof io !== 'undefined' ? io() : null;
+    let roomState = null;
+    let buzzCountdownInterval = null;
+    let buzzSecondsRemaining = 10;
+
+    function startBuzzResponseTimer() {
+      clearInterval(buzzCountdownInterval);
+      buzzSecondsRemaining = 10;
+      const track = document.getElementById('buzzProgressTrack');
+      const fill = document.getElementById('buzzProgressFill');
+      track.style.display = 'block';
+      fill.style.width = '100%';
+
+      buzzCountdownInterval = setInterval(() => {
+        buzzSecondsRemaining = Math.max(0, buzzSecondsRemaining - 1);
+        fill.style.width = `${(buzzSecondsRemaining / 10) * 100}%`;
+        if (buzzSecondsRemaining <= 0) {
+          clearInterval(buzzCountdownInterval);
+        }
+      }, 1000);
+    }
+
+    function stopBuzzResponseTimer() {
+      clearInterval(buzzCountdownInterval);
+      const track = document.getElementById('buzzProgressTrack');
+      if (track) track.style.display = 'none';
+    }
+
+    function connectScreenToRoom(code) {
+      if (!socket || !code) return;
+      const errEl = document.getElementById('screenJoinError');
+      errEl.textContent = '';
+
+      socket.emit('screen_join', { roomCode: code }, (res) => {
+        if (!res || !res.ok) {
+          errEl.textContent = (res && res.error) || 'Failed to connect to room.';
+          return;
+        }
+        try {
+          sessionStorage.setItem('jeopardy_screen_room', res.roomCode);
+        } catch (_) {}
+        roomState = res.state;
+        document.getElementById('screenJoinSection').style.display = 'none';
+        document.getElementById('screenMainStage').style.display = 'flex';
+        renderScreen();
+      });
+    }
+
+    document.getElementById('screenJoinForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const code = document.getElementById('screenRoomInput').value.trim().toUpperCase();
+      connectScreenToRoom(code);
+    });
+
+    document.getElementById('fullscreenBtn').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    if (socket) {
+      socket.on('room_state', (state) => {
+        const prevBuzzed = roomState && roomState.buzzedPlayerId;
+        roomState = state;
+        if (state.buzzedPlayerId && state.buzzedPlayerId !== prevBuzzed) {
+          startBuzzResponseTimer();
+        } else if (!state.buzzedPlayerId) {
+          stopBuzzResponseTimer();
+        }
+        renderScreen();
+      });
+
+      socket.on('player_buzzed', () => {
+        startBuzzResponseTimer();
+      });
+
+      socket.on('clue_resolved', () => {
+        stopBuzzResponseTimer();
+      });
+
+      socket.on('final_timer_tick', ({ timeLeft }) => {
+        if (roomState && roomState.finalJeopardy) {
+          roomState.finalJeopardy.timeLeft = timeLeft;
+          document.getElementById('screenFjTimer').textContent = `${timeLeft}s`;
+        }
+      });
+    }
+
+    function renderScreen() {
+      if (!roomState) return;
+      document.getElementById('screenRoomCode').textContent = roomState.code;
+      document.getElementById('screenActionBanner').textContent = roomState.lastActionMessage || '';
+
+      const currentRound = roomState.rounds && roomState.rounds[roomState.currentRoundIndex];
+      const fj = roomState.finalJeopardy;
+
+      if (roomState.gameEnded) {
+        document.getElementById('screenRoundBadge').textContent = 'Game Over';
+      } else if (fj && fj.active) {
+        document.getElementById('screenRoundBadge').textContent = 'Final Jeopardy';
+      } else if (!roomState.gameStarted) {
+        document.getElementById('screenRoundBadge').textContent = 'Lobby — Waiting to Start';
+      } else {
+        document.getElementById('screenRoundBadge').textContent =
+          currentRound ? currentRound.name : 'Single Jeopardy';
+      }
+
+      const boardSec = document.getElementById('screenBoardSection');
+      const clueSec = document.getElementById('screenClueSpotlight');
+      const fjSec = document.getElementById('screenFinalJeopardySection');
+      const podiumSec = document.getElementById('screenPodiumSection');
+
+      boardSec.style.display = 'none';
+      clueSec.style.display = 'none';
+      fjSec.style.display = 'none';
+      podiumSec.style.display = 'none';
+
+      if (roomState.gameEnded) {
+        podiumSec.style.display = 'flex';
+        renderPodiumView();
+      } else if (fj && fj.active) {
+        fjSec.style.display = 'flex';
+        renderFinalJeopardyScreen(fj);
+      } else if (roomState.activeClue) {
+        clueSec.style.display = 'flex';
+        renderActiveClueSpotlight(roomState.activeClue);
+      } else {
+        boardSec.style.display = 'flex';
+        renderBoardGrid(currentRound);
+      }
+
+      renderScoreboardDock();
+    }
+
+    function renderBoardGrid(round) {
+      const grid = document.getElementById('screenBoardGrid');
+      grid.innerHTML = '';
+      if (!round || !Array.isArray(round.categories) || !round.categories.length) return;
+
+      const cols = round.categories.length;
+      const rows = Math.max(...round.categories.map((c) => c.clues.length));
+      grid.style.gridTemplateColumns = `repeat(${cols}, minmax(140px, 1fr))`;
+
+      round.categories.forEach((cat, idx) => {
+        const header = document.createElement('div');
+        header.className = 'category-cell';
+        header.textContent = cat.title || `Category ${idx + 1}`;
+        grid.appendChild(header);
+      });
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const clue = round.categories[c].clues[r];
+          const tile = document.createElement('div');
+          const isUsed = !clue || clue.used;
+          tile.className = 'clue-tile' + (isUsed ? ' used' : '');
+          tile.textContent = isUsed ? '' : `$${clue.points}`;
+          grid.appendChild(tile);
+        }
+      }
+    }
+
+    // Strictly zero-spoiler active clue display (never renders the answer)
+    function renderActiveClueSpotlight(clue) {
+      document.getElementById('spotlightCategory').textContent = clue.category;
+      document.getElementById('spotlightPoints').textContent = `$${clue.points}`;
+      document.getElementById('spotlightQuestion').textContent = clue.question;
+
+      const bar = document.getElementById('spotlightBuzzerBar');
+      const text = document.getElementById('spotlightBuzzerText');
+
+      if (roomState.buzzedPlayerId) {
+        bar.className = 'spotlight-buzzer-bar buzzed';
+        text.textContent = `🔔 ${roomState.buzzedPlayerName} BUZZED IN FIRST!`;
+      } else if (roomState.buzzerOpen) {
+        bar.className = 'spotlight-buzzer-bar open';
+        text.textContent = '🟢 BUZZER IS OPEN! BUZZ IN ON YOUR PHONE!';
+      } else {
+        bar.className = 'spotlight-buzzer-bar';
+        text.textContent = '🔒 Buzzer Locked — Listen to the Host Read the Clue';
+      }
+    }
+
+    function renderFinalJeopardyScreen(fj) {
+      document.getElementById('screenFjCategory').textContent = `🌟 FINAL JEOPARDY: ${fj.category || 'CATEGORY'}`;
+      document.getElementById('screenFjTimer').textContent = `${fj.timeLeft}s`;
+
+      const promptEl = document.getElementById('screenFjPrompt');
+      const ansEl = document.getElementById('screenFjRevealedAnswer');
+      const grid = document.getElementById('screenFjWagerStatusGrid');
+      grid.innerHTML = '';
+
+      if (fj.stage === 'wager') {
+        promptEl.textContent = 'Teams are currently locking in their Final Jeopardy wagers on their devices...';
+        ansEl.style.display = 'none';
+      } else {
+        promptEl.textContent = fj.question || '';
+        if (fj.answerRevealed && fj.answer) {
+          ansEl.textContent = `Correct Final Response: ${fj.answer}`;
+          ansEl.style.display = 'inline-block';
+        } else {
+          ansEl.style.display = 'none';
+        }
+      }
+
+      (roomState.players || []).forEach((p) => {
+        const hasWager = (fj.submittedWagerPlayerIds || []).includes(p.id);
+        const hasResp = (fj.submittedResponsePlayerIds || []).includes(p.id);
+        const card = document.createElement('div');
+        card.className = 'team-podium-tile' + (hasWager || hasResp ? ' buzzed' : '');
+        const statusLabel =
+          fj.stage === 'wager'
+            ? hasWager
+              ? '✅ Wager Locked'
+              : '⏳ Wagering...'
+            : fj.stage === 'clue'
+            ? hasResp
+              ? '✅ Answer Sent'
+              : '✍️ Writing...'
+            : fj.responses && fj.responses[p.id]
+            ? `"${fj.responses[p.id]}"`
+            : 'No response';
+
+        card.innerHTML = `
+          <div style="overflow: hidden;">
+            <div class="team-name-label">${p.name}</div>
+            <div style="font-size: 0.75rem; color: #cbd5e1;">${statusLabel}</div>
+          </div>
+          <div class="team-score-label">${p.score < 0 ? '-' : ''}$${Math.abs(p.score)}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function renderPodiumView() {
+      const podium = roomState.podium || [];
+      const headline = document.getElementById('screenChampionHeadline');
+      const grid = document.getElementById('screenPodiumGrid');
+      grid.innerHTML = '';
+
+      if (!podium.length) {
+        headline.textContent = 'Game Complete!';
+        return;
+      }
+
+      headline.textContent = `🎉 Champion: ${podium[0].name} with $${podium[0].score}! 🎉`;
+      const medals = ['🥇 1st', '🥈 2nd', '🥉 3rd'];
+      podium.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'team-podium-tile' + (idx === 0 ? ' buzzed' : '');
+        card.innerHTML = `
+          <span class="team-name-label">${medals[idx] || '#' + (idx + 1)} — ${p.name}</span>
+          <span class="team-score-label">$${p.score}</span>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function renderScoreboardDock() {
+      const dock = document.getElementById('screenScoreboardDock');
+      const countLabel = document.getElementById('screenTeamCountLabel');
+      const players = roomState.players || [];
+      countLabel.textContent = `${players.length} Team${players.length === 1 ? '' : 's'} Connected`;
+
+      if (players.length === 0) {
+        dock.innerHTML = `<div style="color: var(--text-muted); font-size: 0.9rem;">Waiting for teams to join Room <strong>${roomState.code}</strong> at <code>/play</code>...</div>`;
+        return;
+      }
+
+      dock.innerHTML = '';
+      players.forEach((p, idx) => {
+        const isBuzzed = roomState.buzzedPlayerId === p.id;
+        const isLocked = (roomState.lockedOutPlayerIds || []).includes(p.id);
+        const tile = document.createElement('div');
+        tile.className =
+          'team-podium-tile' + (isBuzzed ? ' buzzed' : '') + (isLocked ? ' locked' : '');
+        tile.innerHTML = `
+          <div style="overflow: hidden;">
+            <div class="team-name-label">#${idx + 1} ${p.name}</div>
+            <div style="font-size: 0.72rem; color: #cbd5e1;">
+              ${isBuzzed ? '🔔 BUZZED IN!' : isLocked ? '❌ Locked Out' : '🟢 Ready'}
+            </div>
+          </div>
+          <div class="team-score-label">${p.score < 0 ? '-' : ''}$${Math.abs(p.score)}</div>
+        `;
+        dock.appendChild(tile);
+      });
+    }
+
+    // Auto-connect if ?room=CODE query parameter or sessionStorage is present
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const queryRoom = params.get('room');
+      let savedRoom = '';
+      try {
+        savedRoom = sessionStorage.getItem('jeopardy_screen_room') || '';
+      } catch (_) {}
+      const initialCode = (queryRoom || savedRoom || '').trim().toUpperCase();
+      if (initialCode) {
+        document.getElementById('screenRoomInput').value = initialCode;
+        connectScreenToRoom(initialCode);
+      }
+    });
+  </script>
+</body>
+</html>

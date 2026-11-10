@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Jeopardy! Player Buzzer (/play)</title>
+  <style>
+    :root {
+      --bg-dark: #070b19;
+      --card-bg: #111936;
+      --gold: #ffcc00;
+      --green: #10b981;
+      --red: #ef4444;
+      --text-light: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: radial-gradient(circle at top, #172554 0%, var(--bg-dark) 75%);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      transition: background 0.25s ease;
+    }
+
+    body.state-buzzed-self {
+      background: radial-gradient(circle at center, #065f46 0%, #022c22 100%);
+    }
+
+    body.state-buzzed-other {
+      background: radial-gradient(circle at center, #78350f 0%, #1c1917 100%);
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card {
+      background: rgba(17, 25, 54, 0.94);
+      border: 2px solid rgba(255, 204, 0, 0.35);
+      border-radius: 18px;
+      padding: 1.4rem;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+    }
+
+    h1 {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: var(--gold);
+      text-align: center;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-bottom: 1.15rem;
+    }
+
+    .kicked-alert {
+      display: none;
+      background: rgba(239, 68, 68, 0.2);
+      border: 2px solid var(--red);
+      color: #fecaca;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+
+    label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #cbd5e1;
+    }
+
+    input {
+      background: #090d1c;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      color: #ffffff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      width: 100%;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--gold);
+      color: #090d16;
+      font-weight: 900;
+      font-size: 1.05rem;
+      padding: 0.9rem;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .error-msg {
+      color: #f87171;
+      font-size: 0.86rem;
+      text-align: center;
+      margin-top: 0.6rem;
+      min-height: 1.2em;
+    }
+
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.85rem 1.1rem;
+    }
+
+    .player-name {
+      font-weight: 800;
+      font-size: 1.08rem;
+    }
+
+    .room-tag {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .player-score {
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: var(--gold);
+      font-family: monospace;
+    }
+
+    .round-pill-bar {
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gold);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.8rem;
+      border-radius: 999px;
+    }
+
+    .clue-preview {
+      background: rgba(6, 12, 233, 0.35);
+      border: 1px solid rgba(255, 204, 0, 0.35);
+      border-radius: 14px;
+      padding: 1rem;
+      text-align: center;
+      min-height: 92px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+
+    .clue-cat {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .clue-text {
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .buzzer-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0.3rem 0;
+    }
+
+    .giant-buzzer {
+      width: 230px;
+      height: 230px;
+      border-radius: 50%;
+      border: 10px solid #334155;
+      background: radial-gradient(circle at 35% 30%, #64748b, #334155);
+      color: #cbd5e1;
+      font-size: 1.65rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      cursor: not-allowed;
+      box-shadow: 0 14px 0 #1e293b, 0 22px 35px rgba(0, 0, 0, 0.65);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      user-select: none;
+    }
+
+    .giant-buzzer.ready {
+      cursor: pointer;
+      border-color: #fef08a;
+      background: radial-gradient(circle at 35% 30%, #ef4444, #b91c1c);
+      color: #ffffff;
+      box-shadow: 0 14px 0 #7f1d1d, 0 0 40px rgba(239, 68, 68, 0.75);
+    }
+
+    .giant-buzzer.ready:active {
+      transform: translateY(10px);
+      box-shadow: 0 4px 0 #7f1d1d, 0 0 25px rgba(239, 68, 68, 0.9);
+    }
+
+    .giant-buzzer.buzzed-me {
+      border-color: var(--gold);
+      background: radial-gradient(circle at 35% 30%, #10b981, #047857);
+      color: #ffffff;
+      box-shadow: 0 10px 0 #064e3b, 0 0 50px rgba(16, 185, 129, 0.95);
+    }
+
+    .giant-buzzer.buzzed-other {
+      border-color: #f59e0b;
+      background: radial-gradient(circle at 35% 30%, #475569, #1e293b);
+      color: #fde68a;
+    }
+
+    .status-banner {
+      text-align: center;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 0.8rem;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    /* Scalable Live Standings Panel on Mobile (Supports 10+ Teams cleanly) */
+    .mobile-standings-box {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.85rem;
+    }
+
+    .mobile-standings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.55rem;
+    }
+
+    .mobile-standings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 0.45rem;
+      max-height: 165px;
+      overflow-y: auto;
+      padding-right: 0.2rem;
+    }
+
+    .mobile-team-chip {
+      background: rgba(9, 13, 28, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 0.45rem 0.65rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+    }
+
+    .mobile-team-chip.me {
+      border-color: var(--gold);
+      background: rgba(255, 204, 0, 0.12);
+    }
+
+    .timer-badge {
+      font-family: monospace;
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--gold);
+      text-align: center;
+      margin: 0.35rem 0;
+    }
+
+    .podium-list-scroll {
+      max-height: 340px;
+      overflow-y: auto;
+      margin-top: 1rem;
+      padding-right: 0.25rem;
+    }
+
+    .podium-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 10px;
+      margin-bottom: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .podium-item.winner {
+      border: 2px solid var(--gold);
+      background: rgba(255, 204, 0, 0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- 1. Join Screen (Strictly Player Interface) -->
+    <div class="card" id="joinScreen">
+      <h1>🎯 JEOPARDY!</h1>
+      <p class="subtitle">Player Buzzer — Enter Room Code &amp; Team Name</p>
+      <div class="kicked-alert" id="kickedAlertBanner"></div>
+      <form id="joinForm">
+        <div class="form-group">
+          <label for="roomCodeInput">Room Code</label>
+          <input
+            id="roomCodeInput"
+            type="text"
+            maxlength="12"
+            placeholder="e.g. TRIVIA1"
+            style="text-transform: uppercase; text-align: center; font-family: monospace; font-size: 1.35rem;"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="playerNameInput">Player or Team Name</label>
+          <input
+            id="playerNameInput"
+            type="text"
+            maxlength="24"
+            placeholder="e.g. Team Trivia"
+            required
+          />
+        </div>
+        <button class="btn-primary" type="submit">Join Game</button>
+        <div class="error-msg" id="joinError"></div>
+      </form>
+    </div>
+
+    <!-- 2. Active Player Buzzer & Final Jeopardy Screen -->
+    <div id="gameScreen" style="display: none; flex-direction: column; gap: 0.85rem;">
+      <div class="player-header">
+        <div>
+          <div class="player-name" id="displayPlayerName">Player</div>
+          <div class="room-tag" id="displayRoomCode">ROOM: ----</div>
+        </div>
+        <div class="player-score" id="displayScore">$0</div>
+      </div>
+
+      <div class="round-pill-bar" id="displayRoundName">Single Jeopardy</div>
+
+      <!-- Regular / Double Jeopardy Buzzer Container -->
+      <div id="regularBuzzerContainer" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <div class="clue-preview">
+          <div class="clue-cat" id="clueCategoryLabel">WAITING FOR HOST</div>
+          <div class="clue-text" id="clueQuestionLabel">Watch the host screen for the game board!</div>
+        </div>
+
+        <div class="buzzer-wrapper">
+          <button class="giant-buzzer" id="buzzerBtn" type="button" disabled>
+            <span id="buzzerIcon" style="font-size: 2.5rem;">🔒</span>
+            <span id="buzzerLabel">LOCKED</span>
+          </button>
+        </div>
+
+        <div class="status-banner" id="playerStatusBanner">
+          Buzzer is disabled until the host clicks "Open Buzzer".
+        </div>
+      </div>
+
+      <!-- Final Jeopardy Player Container -->
+      <div class="card" id="finalJeopardyPlayerCard" style="display: none; flex-direction: column; gap: 1rem;">
+        <div class="clue-cat" style="text-align: center; font-size: 0.95rem;" id="fjPlayerCategory">FINAL JEOPARDY</div>
+
+        <!-- Stage A: Wager Submission -->
+        <div id="fjWagerSection" style="display: none; flex-direction: column; gap: 0.75rem;">
+          <p style="text-align: center; font-size: 0.9rem; color: #cbd5e1;" id="fjMaxWagerNote">
+            Enter your wager up to your current score:
+          </p>
+          <input id="fjWagerInput" type="number" min="0" step="50" placeholder="0" style="text-align: center; font-size: 1.3rem;" />
+          <button class="btn-primary" id="fjSubmitWagerBtn" type="button">Lock In Wager</button>
+          <div id="fjWagerFeedback" style="text-align: center; font-size: 0.85rem; color: var(--gold);"></div>
+        </div>
+
+        <!-- Stage B: Final Clue + Countdown Timer + Answer Input -->
+        <div id="fjClueSection" style="display: none; flex-direction: column; gap: 0.75rem;">
+          <div class="timer-badge" id="fjPlayerTimer">⏱️ 30s</div>
+          <div class="clue-text" style="text-align: center; padding: 0.5rem 0;" id="fjPlayerClueText"></div>
+          <input id="fjResponseInput" type="text" placeholder="Type your Final Jeopardy answer..." />
+          <button class="btn-primary" id="fjSubmitResponseBtn" type="button">Submit Final Answer</button>
+          <div id="fjResponseFeedback" style="text-align: center; font-size: 0.85rem; color: var(--gold);"></div>
+        </div>
+      </div>
+
+      <!-- Scalable Live Team Standings (Scrollable Grid for 10+ Teams) -->
+      <div class="mobile-standings-box">
+        <div class="mobile-standings-header">
+          <span>Live Team Standings</span>
+          <span id="mobileTeamCountLabel">0 Teams</span>
+        </div>
+        <div class="mobile-standings-grid" id="mobileStandingsGrid"></div>
+      </div>
+    </div>
+
+    <!-- 3. End Game Podium Screen -->
+    <div class="card" id="podiumScreen" style="display: none; text-align: center;">
+      <h1>🏆 FINAL STANDINGS 🏆</h1>
+      <p class="subtitle" id="winnerAnnouncement">Game Complete!</p>
+      <div class="podium-list-scroll" id="podiumList"></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = typeof io !== 'undefined' ? io() : null;
+    let myPlayerId = null;
+    let myRoomCode = '';
+    let myPlayerName = '';
+    let currentRoomState = null;
+
+    try {
+      myPlayerId = localStorage.getItem('jeopardy_player_id') || null;
+      myRoomCode = localStorage.getItem('jeopardy_room_code') || '';
+      myPlayerName = localStorage.getItem('jeopardy_player_name') || '';
+    } catch (_) {}
+
+    const roomInput = document.getElementById('roomCodeInput');
+    const nameInput = document.getElementById('playerNameInput');
+    if (myRoomCode) roomInput.value = myRoomCode;
+    if (myPlayerName) nameInput.value = myPlayerName;
+
+    document.getElementById('joinForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!socket) return;
+
+      const code = roomInput.value.trim().toUpperCase();
+      const name = nameInput.value.trim();
+      const errEl = document.getElementById('joinError');
+      const kickedEl = document.getElementById('kickedAlertBanner');
+      errEl.textContent = '';
+      kickedEl.style.display = 'none';
+
+      socket.emit(
+        'player_join',
+        { roomCode: code, playerName: name, playerId: myPlayerId },
+        (res) => {
+          if (!res || !res.ok) {
+            errEl.textContent = (res && res.error) || 'Could not join room.';
+            return;
+          }
+          myPlayerId = res.playerId;
+          myRoomCode = res.roomCode;
+          myPlayerName = name;
+          try {
+            localStorage.setItem('jeopardy_player_id', myPlayerId);
+            localStorage.setItem('jeopardy_room_code', myRoomCode);
+            localStorage.setItem('jeopardy_player_name', myPlayerName);
+          } catch (_) {}
+
+          document.getElementById('joinScreen').style.display = 'none';
+          document.getElementById('gameScreen').style.display = 'flex';
+          currentRoomState = res.state;
+          renderPlayerView();
+        }
+      );
+    });
+
+    document.getElementById('buzzerBtn').addEventListener('click', () => {
+      if (!socket || !currentRoomState) return;
+      socket.emit('player_buzz', { roomCode: currentRoomState.code, playerId: myPlayerId });
+    });
+
+    document.getElementById('fjSubmitWagerBtn').addEventListener('click', () => {
+      if (!socket || !currentRoomState) return;
+      const val = Number(document.getElementById('fjWagerInput').value);
+      const feedback = document.getElementById('fjWagerFeedback');
+      socket.emit(
+        'player_submit_wager',
+        { roomCode: currentRoomState.code, playerId: myPlayerId, wager: val },
+        (res) => {
+          if (res && res.ok) {
+            feedback.textContent = `✅ Locked in wager: $${res.wager}`;
+          } else if (res && res.error) {
+            feedback.textContent = `❌ ${res.error}`;
+          }
+        }
+      );
+    });
+
+    document.getElementById('fjSubmitResponseBtn').addEventListener('click', () => {
+      if (!socket || !currentRoomState) return;
+      const ans = document.getElementById('fjResponseInput').value.trim();
+      const feedback = document.getElementById('fjResponseFeedback');
+      socket.emit(
+        'player_submit_final_answer',
+        { roomCode: currentRoomState.code, playerId: myPlayerId, response: ans },
+        (res) => {
+          if (res && res.ok) {
+            feedback.textContent = '✅ Final Jeopardy response submitted!';
+          } else if (res && res.error) {
+            feedback.textContent = `❌ ${res.error}`;
+          }
+        }
+      );
+    });
+
+    if (socket) {
+      socket.on('room_state', (state) => {
+        currentRoomState = state;
+        renderPlayerView();
+      });
+
+      socket.on('player_kicked', (payload) => {
+        myPlayerId = null;
+        currentRoomState = null;
+        try {
+          localStorage.removeItem('jeopardy_player_id');
+        } catch (_) {}
+
+        document.body.className = '';
+        document.getElementById('gameScreen').style.display = 'none';
+        document.getElementById('podiumScreen').style.display = 'none';
+        document.getElementById('joinScreen').style.display = 'block';
+
+        const kickedEl = document.getElementById('kickedAlertBanner');
+        kickedEl.textContent =
+          (payload && payload.message) || '⚠️ You were removed from the room by the host.';
+        kickedEl.style.display = 'block';
+      });
+
+      socket.on('final_timer_tick', ({ timeLeft }) => {
+        if (currentRoomState && currentRoomState.finalJeopardy) {
+          currentRoomState.finalJeopardy.timeLeft = timeLeft;
+          document.getElementById('fjPlayerTimer').textContent = `⏱️ ${timeLeft}s`;
+          if (timeLeft <= 0) {
+            document.getElementById('fjResponseInput').disabled = true;
+            document.getElementById('fjSubmitResponseBtn').disabled = true;
+          }
+        }
+      });
+    }
+
+    function renderPlayerView() {
+      if (!currentRoomState || !myPlayerId) return;
+
+      const podiumScreen = document.getElementById('podiumScreen');
+      const gameScreen = document.getElementById('gameScreen');
+
+      if (currentRoomState.gameEnded) {
+        gameScreen.style.display = 'none';
+        podiumScreen.style.display = 'block';
+        document.body.className = '';
+        renderPodium(currentRoomState.podium || []);
+        return;
+      } else {
+        podiumScreen.style.display = 'none';
+        gameScreen.style.display = 'flex';
+      }
+
+      const players = currentRoomState.players || [];
+      const me = players.find((p) => p.id === myPlayerId);
+      if (!me) return;
+
+      const myScore = me.score || 0;
+      document.getElementById('displayPlayerName').textContent = me.name;
+      document.getElementById('displayRoomCode').textContent = `ROOM: ${currentRoomState.code}`;
+      document.getElementById('displayScore').textContent =
+        (myScore < 0 ? '-' : '') + '$' + Math.abs(myScore);
+
+      // Render current round indicator (Single Jeopardy vs Double Jeopardy vs Final Jeopardy)
+      const fj = currentRoomState.finalJeopardy;
+      const activeRoundObj =
+        currentRoomState.rounds && currentRoomState.rounds[currentRoomState.currentRoundIndex];
+      document.getElementById('displayRoundName').textContent =
+        fj && fj.active
+          ? '🌟 Final Jeopardy'
+          : activeRoundObj
+          ? activeRoundObj.name
+          : 'Single Jeopardy';
+
+      // Render Scalable Standings Grid (10+ Teams)
+      document.getElementById('mobileTeamCountLabel').textContent =
+        `${players.length} Team${players.length === 1 ? '' : 's'}`;
+      const standingsGrid = document.getElementById('mobileStandingsGrid');
+      standingsGrid.innerHTML = '';
+      players.forEach((p, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'mobile-team-chip' + (p.id === myPlayerId ? ' me' : '');
+        chip.innerHTML = `
+          <span style="font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            #${idx + 1} ${p.name}
+          </span>
+          <span style="color: var(--gold); font-family: monospace; font-weight: 800;">
+            ${p.score < 0 ? '-' : ''}$${Math.abs(p.score)}
+          </span>
+        `;
+        standingsGrid.appendChild(chip);
+      });
+
+      const regContainer = document.getElementById('regularBuzzerContainer');
+      const fjCard = document.getElementById('finalJeopardyPlayerCard');
+
+      if (fj && fj.active) {
+        document.body.className = '';
+        regContainer.style.display = 'none';
+        fjCard.style.display = 'flex';
+        document.getElementById('fjPlayerCategory').textContent = `🌟 FINAL JEOPARDY: ${fj.category}`;
+
+        const wagerSec = document.getElementById('fjWagerSection');
+        const clueSec = document.getElementById('fjClueSection');
+
+        if (fj.stage === 'wager') {
+          wagerSec.style.display = 'flex';
+          clueSec.style.display = 'none';
+          const maxWager = Math.max(0, myScore);
+          document.getElementById('fjMaxWagerNote').textContent =
+            `Enter your wager ($0 up to $${maxWager}):`;
+          document.getElementById('fjWagerInput').max = String(maxWager);
+          const alreadyWagered = (fj.submittedWagerPlayerIds || []).includes(myPlayerId);
+          document.getElementById('fjSubmitWagerBtn').textContent = alreadyWagered
+            ? 'Update Wager'
+            : 'Lock In Wager';
+        } else {
+          wagerSec.style.display = 'none';
+          clueSec.style.display = 'flex';
+          document.getElementById('fjPlayerTimer').textContent = `⏱️ ${fj.timeLeft}s`;
+          document.getElementById('fjPlayerClueText').textContent = fj.question;
+          const expired = fj.timeLeft <= 0 || fj.stage === 'grading';
+          document.getElementById('fjResponseInput').disabled = expired;
+          document.getElementById('fjSubmitResponseBtn').disabled = expired;
+          if (fj.answerRevealed && fj.answer) {
+            document.getElementById('fjResponseFeedback').textContent =
+              `Correct Response: ${fj.answer}`;
+          }
+        }
+        return;
+      }
+
+      regContainer.style.display = 'flex';
+      fjCard.style.display = 'none';
+
+      const clue = currentRoomState.activeClue;
+      const catLabel = document.getElementById('clueCategoryLabel');
+      const qLabel = document.getElementById('clueQuestionLabel');
+
+      if (!currentRoomState.gameStarted) {
+        catLabel.textContent = 'LOBBY — GAME SETUP';
+        qLabel.textContent = 'Connected! Waiting for the Host to finish entering questions and start the game...';
+      } else if (clue) {
+        catLabel.textContent = `${clue.category} • $${clue.points}`;
+        qLabel.textContent = clue.question;
+      } else {
+        catLabel.textContent = 'WAITING FOR NEXT CLUE';
+        qLabel.textContent = `Host is selecting the next clue in ${activeRoundObj ? activeRoundObj.name : 'Jeopardy'}...`;
+      }
+
+      const buzzerBtn = document.getElementById('buzzerBtn');
+      const buzzerIcon = document.getElementById('buzzerIcon');
+      const buzzerLabel = document.getElementById('buzzerLabel');
+      const banner = document.getElementById('playerStatusBanner');
+
+      const isLockedOut = (currentRoomState.lockedOutPlayerIds || []).includes(myPlayerId);
+      const buzzedId = currentRoomState.buzzedPlayerId;
+
+      if (buzzedId === myPlayerId) {
+        document.body.className = 'state-buzzed-self';
+        buzzerBtn.disabled = true;
+        buzzerBtn.className = 'giant-buzzer buzzed-me';
+        buzzerIcon.textContent = '🎤';
+        buzzerLabel.textContent = 'YOU BUZZED!';
+        banner.textContent = '🌟 YOU BUZZED IN FIRST! Answer out loud now!';
+      } else if (buzzedId) {
+        document.body.className = 'state-buzzed-other';
+        buzzerBtn.disabled = true;
+        buzzerBtn.className = 'giant-buzzer buzzed-other';
+        buzzerIcon.textContent = '🔔';
+        buzzerLabel.textContent = 'LOCKED';
+        banner.textContent = `${currentRoomState.buzzedPlayerName} buzzed in first!`;
+      } else if (isLockedOut) {
+        document.body.className = '';
+        buzzerBtn.disabled = true;
+        buzzerBtn.className = 'giant-buzzer';
+        buzzerIcon.textContent = '❌';
+        buzzerLabel.textContent = 'OUT';
+        banner.textContent = 'You already attempted this clue.';
+      } else if (currentRoomState.buzzerOpen && clue) {
+        document.body.className = '';
+        buzzerBtn.disabled = false;
+        buzzerBtn.className = 'giant-buzzer ready';
+        buzzerIcon.textContent = '⚡';
+        buzzerLabel.textContent = 'BUZZ!';
+        banner.textContent = '🟢 BUZZER OPEN! Tap fast to buzz in!';
+      } else {
+        document.body.className = '';
+        buzzerBtn.disabled = true;
+        buzzerBtn.className = 'giant-buzzer';
+        buzzerIcon.textContent = '🔒';
+        buzzerLabel.textContent = 'LOCKED';
+        banner.textContent = 'Buzzer is disabled until the host clicks "Open Buzzer".';
+      }
+    }
+
+    function renderPodium(podium) {
+      const list = document.getElementById('podiumList');
+      const announce = document.getElementById('winnerAnnouncement');
+      list.innerHTML = '';
+
+      if (!podium.length) {
+        announce.textContent = 'Game Over!';
+        return;
+      }
+
+      const top = podium[0];
+      announce.textContent = `🎉 Champion: ${top.name} ($${top.score}) 🎉`;
+
+      const medals = ['🥇', '🥈', '🥉'];
+      podium.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.className = 'podium-item' + (idx === 0 ? ' winner' : '');
+        row.innerHTML = `
+          <span style="font-weight: 800;">
+            ${medals[idx] || `#${idx + 1}`} ${p.name} ${p.id === myPlayerId ? '(You)' : ''}
+          </span>
+          <span style="color: var(--gold); font-weight: 900; font-family: monospace;">
+            $${p.score}
+          </span>
+        `;
+        list.appendChild(row);
+      });
+    }
+  </script>
+</body>
+</html>
